@@ -1,6 +1,6 @@
 from argparse import REMAINDER
 
-from pkg_name.arg_parser import ArgParser
+from dock_schedule.arg_parser import ArgParser
 
 
 def parse_parent_args(args: dict):

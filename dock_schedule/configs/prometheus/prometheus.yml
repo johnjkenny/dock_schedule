@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: Node-Scrape
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        port: 9100
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_container_label_prometheus_job]
+        regex: node-exporter
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: dock-schedule-metrics
+        action: keep
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: instance
+
+  - job_name: Broker-Scrape
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        port: 15692
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_container_label_prometheus_job]
+        regex: broker-stats
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: dock-schedule-metrics
+        action: keep
+      - source_labels: [__address__]
+        regex: (.+):\d+
+        replacement: $1:15692
+        target_label: __address__

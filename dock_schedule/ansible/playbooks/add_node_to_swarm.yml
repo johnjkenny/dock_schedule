@@ -1,0 +1,15 @@
+- name: Join worker to Swarm
+  hosts: all
+  become: true
+  vars:
+    manager_ip: ""
+    token: ""
+  tasks:
+    - name: Install Docker
+      ansible.builtin.import_tasks: tasks/install_docker_tasks.yml
+
+    - name: Join Swarm
+      ansible.builtin.import_tasks: tasks/join_swarm_tasks.yml
+
+    - name: Add Swarm Firewall Rules
+      ansible.builtin.import_tasks: tasks/add_swarm_firewall_rule_tasks.yml

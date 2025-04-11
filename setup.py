@@ -3,10 +3,10 @@ from setuptools import setup
 
 try:
     setup(
-        name='pkg-name',
+        name='dock-schedule',
         version='1.0.0',
         entry_points={'console_scripts': [
-            'pkg-name = pkg_name.cli:pkg_parent',
+            'dschedule = dock_sched.cli:parent',
         ]},
     )
     exit(0)

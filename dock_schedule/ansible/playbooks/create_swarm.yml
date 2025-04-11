@@ -1,0 +1,16 @@
+---
+- name: Create Docker Swarm
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    advertise_addr: "{{ ansible_default_ipv4.address }}"
+  tasks:
+    - name: Install Docker
+      ansible.builtin.import_tasks: tasks/install_docker_tasks.yml
+
+    - name: Create Swarm
+      ansible.builtin.import_tasks: tasks/create_swarm_tasks.yml
+
+    - name: Add Swarm Firewall Rules
+      ansible.builtin.import_tasks: tasks/add_swarm_firewall_rule_tasks.yml
