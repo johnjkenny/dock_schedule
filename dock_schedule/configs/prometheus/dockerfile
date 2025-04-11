@@ -1,0 +1,6 @@
+FROM prom/prometheus:latest
+
+USER root
+COPY prometheus.yml /etc/prometheus/
+COPY web_config.yml /etc/prometheus/
+RUN chmod 440 /etc/prometheus/*.yml

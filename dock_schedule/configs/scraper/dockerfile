@@ -1,0 +1,3 @@
+FROM prom/node-exporter:latest
+
+COPY web_config.yml /etc/prometheus/

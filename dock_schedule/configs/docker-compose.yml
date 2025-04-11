@@ -1,0 +1,131 @@
+services:
+  scraper:
+    image: scraper:latest
+    build: /opt/dock-schedule/scraper
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /run/udev/data:/run/udev/data
+      - /:/rootfs:ro
+    command:
+      - '--path.rootfs=/rootfs'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      # - '--web.config.file=/etc/prometheus/web_config.yml'
+    networks:
+      - dock-schedule-metrics
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'node_exporter']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - prometheus-job=node-exporter
+
+  broker:
+    image: broker:latest
+    build: /opt/dock-schedule/broker
+    volumes:
+      - /mnt/swarm-share/broker:/var/lib/rabbitmq
+    secrets:
+      - broker_user
+      - broker_passwd
+      - broker_vhost
+    networks:
+      - dock-schedule-metrics
+      - dock-schedule-broker
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 15692:15692
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'rabbitmq-server']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - prometheus-job=broker-stats
+
+  prometheus:
+    image: prometheus:latest
+    build: /opt/dock-schedule/prometheus
+    user: root
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      # - '--web.config.file=/etc/prometheus/web_config.yml'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/swarm-share/prometheus:/prometheus
+      - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    networks:
+      - dock-schedule-metrics
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'prometheus']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana:latest
+    environment:
+      - GF_LIVE_ENABLED=false
+      # - GF_FEATURE_TOGGLES_ENABLE=publicDashboards
+    build: /opt/dock-schedule/grafana
+    volumes:
+      - /mnt/swarm-share/grafana:/var/lib/grafana
+    ports:
+      - 3000:3000
+    networks:
+      - dock-schedule-metrics
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'grafana server']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  dock-schedule-metrics:
+    name: dock-schedule-metrics
+    driver: overlay
+    external: true
+
+  dock-schedule-broker:
+    name: dock-schedule-broker
+    driver: overlay
+    external: true
+
+
+secrets:
+  broker_user:
+    external: true
+  broker_passwd:
+    external: true
+  broker_vhost:
+    external: true

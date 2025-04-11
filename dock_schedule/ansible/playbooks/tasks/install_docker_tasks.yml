@@ -1,0 +1,61 @@
+- name: Install dependencies (APT)
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - rsync
+      - firewalld
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Set up Docker repo on Debian-family systems
+  when: ansible_facts['os_family'] == 'Debian'
+  block:
+    - name: Add Docker GPG key (APT)
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg
+        state: present
+
+    - name: Add Docker repo (APT)
+      ansible.builtin.apt_repository:
+        repo: >
+          deb [arch=amd64]
+          https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}
+          {{ ansible_facts['distribution_release'] }} stable
+        state: present
+
+- name: Install dependencies (YUM/DNF)
+  ansible.builtin.package:
+    name:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+      - rsync
+      - firewalld
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Set up Docker repo on RedHat-family systems
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Install Docker CE
+  ansible.builtin.package:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+
+- name: Enable and start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
