@@ -1,0 +1,39 @@
+- name: Run Job Script
+  hosts: all
+  gather_facts: false
+  vars:
+    script_file: ""
+    script_type: ""
+    script_remote_path: "/tmp/{{ script_file }}"
+    script_source: "/app/jobs/{{ script_type }}/{{ script_file }}"
+  tasks:
+    - name: Run Job
+      when: inventory_hostname == 'localhost'
+      ansible.builtin.command: >-
+        {{ script_type }} {{ script_source }}
+        {% if script_args is defined and script_args | length > 0 %}
+          {{ script_args | join(' ') }}
+        {% endif %}
+      changed_when: true
+
+    - name: Copy Script
+      when: inventory_hostname != 'localhost'
+      ansible.builtin.copy:
+        src: "{{ script_source }}"
+        dest: "{{ script_remote_path }}"
+        mode: '0755'
+
+    - name: Run Job Remotely
+      when: inventory_hostname != 'localhost'
+      ansible.builtin.command: >-
+        {{ script_type }} {{ script_source }}
+        {% if script_args is defined and script_args | length > 0 %}
+          {{ script_args | join(' ') }}
+        {% endif %}
+      changed_when: true
+
+    - name: Remove Remote Job Script
+      when: inventory_hostname != 'localhost'
+      ansible.builtin.file:
+        path: "{{ script_remote_path }}"
+        state: absent

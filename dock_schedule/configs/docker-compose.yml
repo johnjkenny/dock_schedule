@@ -110,6 +110,54 @@ services:
       timeout: 5s
       retries: 3
 
+  scheduler:
+    image: scheduler:latest
+    build: /opt/dock-schedule/scheduler
+    volumes:
+      - /opt/dock-schedule/scheduler/scheduler.py:/app/scheduler.py
+    networks:
+      - dock-schedule-broker
+    secrets:
+      - broker_user
+      - broker_passwd
+      - broker_vhost
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'scheduler']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    image: worker:latest
+    build: /opt/dock-schedule/worker
+    volumes:
+      - /opt/dock-schedule/worker/worker.py:/app/worker.py
+      - /mnt/swarm-share/ansible:/app/ansible
+      - /mnt/swarm-share/jobs:/app/jobs
+    networks:
+      - dock-schedule-broker
+    secrets:
+      - broker_user
+      - broker_passwd
+      - broker_vhost
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'worker']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 networks:
   dock-schedule-metrics:
     name: dock-schedule-metrics
@@ -120,7 +168,6 @@ networks:
     name: dock-schedule-broker
     driver: overlay
     external: true
-
 
 secrets:
   broker_user:

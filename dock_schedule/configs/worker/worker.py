@@ -1,0 +1,481 @@
+#!/usr/bin/env python3
+
+import ssl
+import logging
+from time import sleep, gmtime
+from threading import Thread, Event
+from json import loads
+from typing import Dict, List
+from tempfile import TemporaryDirectory
+
+import ansible_runner
+from pika import SelectConnection, BaseConnection
+from pika.adapters.blocking_connection import BlockingChannel
+from pika.credentials import PlainCredentials
+from pika.channel import Channel
+from pika.connection import ConnectionParameters, SSLOptions
+from pika.spec import Basic
+
+
+def get_logger():
+    log = logging.getLogger('dock-worker')
+    log.setLevel(logging.INFO)
+    if not log.hasHandlers():
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('[%(asctime)s][%(levelname)s][%(module)s,%(lineno)d]: %(message)s')
+        formatter.converter = gmtime
+        stream_handler.setFormatter(formatter)
+        log.addHandler(stream_handler)
+    return log
+
+
+class JobConsumer():
+    def __init__(self, callback: callable, logger: logging.Logger = None):
+        self.callback = callback
+        self.log = logger or get_logger()
+        self.__route = 'job-queue'
+        self.__exchange = 'dock-schedule'
+        self.__thread: Thread | None = None
+        self.__client: SelectConnection | None = None
+        self.__channel: BlockingChannel | None = None
+        self.__connect_attempt = 0
+        self.__max_connect_attempts = 36
+        self.__reconnecting = False
+        self.__bind_set = False
+        self.__conn_blocked = False
+        self.__queue_declared = False
+
+    @property
+    def client_exists(self):
+        if self.__client and self.__client.is_open:
+            if self.__channel:
+                if self.__channel.is_open:
+                    return True
+                return self.__wait_for_channel_open()
+            self.log.error('Broker connection channel is closed')
+        else:
+            self.log.error('Broker connection is closed')
+        return False
+
+    def __wait_for_channel_open(self):
+        cnt = 0
+        if self.__channel is not None:
+            while not self.__channel.is_open:
+                cnt += 1
+                if cnt > 100:
+                    self.log.error('Failed to open channel')
+                    return False
+                sleep(.2)
+            self.log.debug('Channel is open')
+            return True
+        self.log.error('Channel does not exist')
+        return False
+
+    def __wait_for_bind_set(self):
+        cnt = 0
+        while cnt < 50:
+            if self.__bind_set:
+                self.log.info('Successfully set queue')
+                return True
+            sleep(.2)
+            cnt += 1
+        self.log.error('Failed to set queue bind')
+        return False
+
+    def __wait_for_conn_unblock(self, timeout: int = 180):
+        self.__conn_blocked = True
+        cnt = 0
+        while self.__conn_blocked:
+            sleep(1)
+            cnt += 1
+            if cnt > timeout:
+                self.log.error('Timeout waiting for connection unblock')
+                return False
+        return True
+
+    def __conn_unblocked(self):
+        self.__conn_blocked = False
+
+    def __load_credentials(self):
+        creds = {'user': '', 'passwd': '', 'vhost': ''}
+        for key in creds.keys():
+            try:
+                with open(f'/run/secrets/broker_{key}', 'r') as f:
+                    creds[key] = f.read().strip()
+            except Exception:
+                self.log.exception(f'Failed to load broker credentials for {key}')
+        return creds
+
+    def __create_connection_ssl_obj(self):
+        try:
+            context = ssl.create_default_context(cafile='')
+            context.load_cert_chain('', '')
+            context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
+            return SSLOptions(context, 'sg_cluster_broker')
+        except Exception:
+            self.log.exception('Failed to create SSL context for broker connection')
+        return None
+
+    def __create_connection_parameters(self):
+        creds: dict = self.__load_credentials()
+        if creds:
+            # ssl = self.__create_connection_ssl_obj()
+            # if ssl:
+            try:
+                return ConnectionParameters(
+                    host='broker',
+                    port=5672,
+                    virtual_host=creds.get('vhost', '/'),
+                    credentials=PlainCredentials(creds.get('user', ''), creds.get('passwd', '')),
+                    heartbeat=15,
+                    blocked_connection_timeout=20
+                )
+            except Exception:
+                self.log.exception('Failed to create connection parameters')
+        return None
+
+    def __reconnect_attempt(self):
+        self.__reconnecting = True
+        if self.__connect_attempt < self.__max_connect_attempts:
+            if self.__connect_attempt != 0:
+                sleep(5)
+            self.__connect_attempt += 1
+            self.log.info(f'Reconnecting to broker {self.__connect_attempt}/{self.__max_connect_attempts - 1}')
+            return self._restart_io_loop_in_thread()
+        return False
+
+    def __connect(self, on_connect: callable = None, on_failed: callable = None, on_closed: callable = None):
+        self.log.info('Connecting to message broker')
+        params = self.__create_connection_parameters()
+        if params:
+            try:
+                return SelectConnection(params, on_connect, on_failed, on_closed)
+            except Exception:
+                self.log.exception('Failed to create connection to broker')
+        return None
+
+    def __connect_success(self, connection: BaseConnection):
+        self.log.info('Successfully connected to broker')
+        self.__connect_attempt = 0
+        connection.channel(on_open_callback=self.__open_channel)
+
+    def __connect_failed(self, *args: tuple):
+        self.log.error(f'Failed to create connection to broker: {args[1]}')
+        return self.__reconnect_attempt()
+
+    def __connect_closed(self, *args: tuple):
+        self.log.error(f'Connection closed: {args[1]}')
+        return self.__reconnect_attempt()
+
+    def __open_channel(self, channel: BlockingChannel):
+        self.log.info('Successfully opened channel')
+        self.__channel = channel
+        self.__set_queue_bind()
+
+    def __set_queue_bind(self):
+        try:
+            self.__channel.exchange_declare(self.__exchange, 'direct')
+            self.__channel.queue_declare(self.__route, durable=True)
+            self.__channel.basic_qos(prefetch_count=3)
+            self.log.info('Successfully set exchange')
+            self.__channel.queue_bind(self.__route, self.__exchange, self.__route)
+            self.__bind_set = True
+            self.__reconnecting = False
+            self.__conn_blocked = False
+        except Exception:
+            self.log.exception('Failed to bind to queue')
+            return False
+        return self.__start_consuming_queue()
+
+    def __start_consuming_queue(self):
+        try:
+            self.log.info('Starting to consume messages from queue')
+            self.__channel.basic_consume(self.__route, self.callback, False)
+            return True
+        except Exception:
+            self.log.exception('Exception occurred while consuming message queue')
+            return False
+
+    def __reset_connect_state(self):
+        self.__channel = None
+        self.__client = None
+        self.__bind_set = False
+
+    def __start_io_loop(self) -> bool:
+        self.__client = self.__connect(self.__connect_success, self.__connect_failed, self.__connect_closed)
+        if self.__client is not None:
+            try:
+                self.__client.add_on_connection_blocked_callback(self.__wait_for_conn_unblock)
+                self.__client.add_on_connection_unblocked_callback(self.__conn_unblocked)
+                self.__client.ioloop.start()
+                return True
+            except Exception:
+                self.log.exception('Exception occurred in IO loop')
+        return False
+
+    def __stop_io_loop(self):
+        try:
+            if self.__channel is not None:
+                if self.__channel.is_open:
+                    self.__channel.close()
+            if self.__client is not None:
+                if self.__client.is_open:
+                    self.__client.close()
+                self.__client.ioloop.stop()
+            self.__reset_connect_state()
+            return True
+        except Exception:
+            self.log.exception('Exception occurred while stopping IO-loop')
+            return False
+
+    def __stop_thread(self):
+        if self.__thread:
+            try:
+                if self.__thread.is_alive():
+                    self.__thread.join(3)
+                    if self.__thread.is_alive():
+                        self.log.error('Failed to stop broker thread')
+                        return False
+                    self.__thread = None
+                    self.log.info('Successfully stopped broker thread')
+                return True
+            except Exception:
+                self.log.exception('Exception occurred while stopping broker thread')
+        self.log.debug('Broker thread does not exist to stop')
+        return True
+
+    def _wait_for_reconnect(self, timeout: int = 1800):
+        cnt = 0
+        while self.__reconnecting:
+            self.log.info('Waiting for reconnection...')
+            sleep(1)
+            cnt += 1
+            if cnt > timeout:
+                self.log.error('Timeout waiting for reconnection')
+                return False
+        return True
+
+    def _restart_io_loop_in_thread(self):
+        """The connection to the broker is done in a separate thread to avoid blocking the main thread. This method
+        will get called via the reconnect procedure to restart the connection to the broker within the thread.
+        __start_io_loop might not return as it will be running the IO loop until the connection is closed. This is OK.
+
+        Returns:
+            bool: True if the connection was successfully restarted, otherwise False
+        """
+        if self.__stop_io_loop():
+            return self.__start_io_loop()
+        self.log.error('Failed to restart broker connection')
+        return False
+
+    def __configure_queue(self):
+        if not self.__queue_declared:
+            try:
+                self.__channel.queue_declare(self.__route, durable=True)
+                self.__queue_declared = True
+                self.log.info('Successfully declared queue')
+            except Exception:
+                self.log.exception('Failed to declare queue')
+                return False
+        return True
+
+    def __handle_blocked_connection(self):
+        self.log.info('Connection blocked, waiting for unblock from server...')
+        while self.__conn_blocked:
+            sleep(.5)
+        self.log.info('Connection unblocked, resuming operations...')
+
+    def __can_send(self) -> bool:
+        if self.__conn_blocked:
+            self.__handle_blocked_connection()
+        if self.client_exists:
+            return self.__configure_queue()
+        if self._wait_for_reconnect():
+            return self.__can_send()
+        return False
+
+    def start(self):
+        if self.__thread:
+            self.log.error('Broker already running')
+            return False
+        self.log.info('Starting broker')
+        try:
+            self.__thread = Thread(target=self.__start_io_loop, daemon=True)
+            self.__thread.start()
+            if self.__wait_for_bind_set():
+                return True
+            self.log.error('Failed to start broker')
+            return False
+        except Exception:
+            self.log.exception('Failed to start broker')
+        return False
+
+    def stop(self):
+        self.log.info('Stopping broker')
+        if self.__stop_io_loop():
+            return self.__stop_thread()
+        self.log.error('Failed to stop broker')
+        return False
+
+
+class Worker():
+    def __init__(self):
+        self.log = get_logger()
+        self.stop_trigger = Event()
+        self.__consumer = JobConsumer(self.__job_request_handler, self.log)
+        if not self.__consumer.start():
+            raise Exception('Failed to start job consumer')
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.__consumer.stop()
+
+    def __convert_job_request(self, job_request: bytes):
+        try:
+            job = loads(job_request.decode())
+            if isinstance(job, dict):
+                return job
+            self.log.error(f'Job request is not a dictionary: {type(job)}')
+        except Exception:
+            self.log.exception('Failed to convert job request')
+        return None
+
+    def __job_request_handler(self, ch: Channel, method: Basic.Deliver, _, body: bytes):
+        job = self.__convert_job_request(body)
+        if job:
+            self.run_job(job)
+            # toDO: update state in mongoDB
+        try:
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+        except Exception:
+            self.log.exception('Failed to ack message')
+
+    @property
+    def ansible_env_vars(self) -> Dict:
+        """Get Ansible environment variables
+
+        Returns:
+            dict: Ansible environment variables
+        """
+        return {
+            'ANSIBLE_CONFIG': '/app/ansible/ansible.cfg',
+            'ANSIBLE_PYTHON_INTERPRETER': '/usr/bin/python3',
+            'ANSIBLE_PRIVATE_KEY_FILE': '/app/ansible/.key/.ansible_rsa',
+        }
+
+    def __parse_host_inventory(self, inventory: Dict | List | None) -> Dict:
+        if inventory:
+            if isinstance(inventory, dict):
+                return {'all': {'hosts': {inventory.get('name', 'localhost'): {'ansible_host':
+                        inventory.get('ip', '127.0.0.1')}}}}
+            elif isinstance(inventory, list):
+                __inventory = {'all': {'hosts': {}}}
+                for host in inventory:
+                    if not isinstance(host, dict):
+                        self.log.error(f'Invalid host format: {type(host)}')
+                        return {}
+                    name = host.get('name')
+                    ip = host.get('ip')
+                    if not name or not ip:
+                        self.log.error(f"Host entry missing 'name' or 'ip': {host}")
+                        return {}
+                    __inventory['all']['hosts'][name] = {'ansible_host': ip}
+                return __inventory
+            else:
+                self.log.error(f'Invalid inventory type: {type(inventory)}')
+                return {}
+        return {'all': {'hosts': {'localhost': {'ansible_connection': 'local'}}}}
+
+    def __parse_script_type(self, script_type: str | None, job_name: str) -> str:
+        if script_type in ['python3', 'ansible', 'bash', 'php', 'node']:
+            return script_type
+        suffix = job_name.split('.')[-1]
+        if suffix == 'py':
+            return 'python3'
+        if suffix == 'sh':
+            return 'bash'
+        if suffix == 'php':
+            return 'php'
+        if suffix == 'js' or script_type == 'javascript':
+            return 'node'
+        if suffix == 'yml' or suffix == 'yaml':
+            return 'ansible'
+        self.log.error(f'Unknown script type: {script_type} for job: {job_name}')
+        return ''
+
+    def __parse_playbook(self, job: Dict) -> str:
+        script_type = self.__parse_script_type(job.get('type'), job.get('name'))
+        if script_type:
+            if script_type == 'ansible':
+                playbook = f'/app/ansible/playbooks/{job.get("name")}'
+            else:
+                playbook = '/app/ansible/playbooks/run_job_script.yml'
+                job['extra_vars'] = {
+                    'script_file': job.get('name'),
+                    'script_type': script_type,
+                    'script_args': job.get('args', []),
+                }
+            return playbook
+        return ''
+
+    def __handle_result(self, result: ansible_runner.runner.Runner, job: Dict):
+        if result.rc == 0:
+            self.log.info(f"Job completed successfully: {job.get('_id')}")
+            return True
+        for ev in result.events:
+            if ev.get('event') == 'runner_on_failed':
+                data = ev.get('event_data', {})
+                task = data.get('task', 'unknown')
+                host = data.get('host', 'unknown')
+                msg = data.get('res', {}).get('stderr', '') or data.get('res', {}).get('msg', '')
+                self.log.error(f"Task '{task}' failed on host '{host}': {msg}")
+        return False
+
+    def run_job(self, job: Dict) -> bool:
+        self.log.info(f'Running job: {job.get("_id")}')
+        inventory = self.__parse_host_inventory(job.get('inventory'))
+        playbook = self.__parse_playbook(job)
+        if inventory and playbook:
+            with TemporaryDirectory(prefix=f'job-{job.get("_id")}-', dir='/tmp', delete=True) as temp_dir:
+                return self.__handle_result(ansible_runner.run(
+                    private_data_dir=temp_dir,
+                    playbook=playbook,
+                    inventory=inventory,
+                    envvars=self.ansible_env_vars,
+                    extravars=job.get('extra_vars', {}),
+                    quiet=True
+                ), job)
+        return False
+
+
+def main():
+    with Worker() as worker:
+        while not worker.stop_trigger.is_set():
+            sleep(1)
+
+
+if __name__ == "__main__":
+    main()
+
+
+'''
+Job Request example:
+{
+    "_id": "job_id",
+    "inventory": "inventory.ini",  # or leave empty for localhost
+    "type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
+    "name": "job_name",
+    "args": [],
+    "kwargs": {}
+}
+
+jobs are listed by type:
+    - python3
+    - ansible
+    - bash
+    - php
+    - javascript
+'''
