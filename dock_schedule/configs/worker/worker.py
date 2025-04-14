@@ -7,6 +7,7 @@ from threading import Thread, Event
 from json import loads
 from typing import Dict, List
 from tempfile import TemporaryDirectory
+from urllib.parse import quote_plus
 
 import ansible_runner
 from pika import SelectConnection, BaseConnection
@@ -15,6 +16,8 @@ from pika.credentials import PlainCredentials
 from pika.channel import Channel
 from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, OperationFailure
 
 
 def get_logger():
@@ -28,6 +31,64 @@ def get_logger():
         stream_handler.setFormatter(formatter)
         log.addHandler(stream_handler)
     return log
+
+
+class Mongo():
+    def __init__(self, logger: logging.Logger = None):
+        self.log = logger
+        self.__client: MongoClient | None = None
+        self.__creds = {'user': '', 'passwd': '', 'db': ''}
+
+    @property
+    def client(self):
+        if self.__client is None:
+            if self.__load_creds():
+                try:
+                    self.__client = MongoClient("mongodb://%s:%s@mongodb:27017/" % (
+                        quote_plus(self.__creds.get('user')), quote_plus(self.__creds.get('passwd'))))
+                except ConnectionFailure:
+                    self.log.exception('Failed to connect to MongoDB')
+                except Exception:
+                    self.log.exception('Failed to create MongoDB client')
+        return self.__client
+
+    def __load_creds(self):
+        for key in self.__creds.keys():
+            try:
+                with open(f'/run/secrets/mongo_{key}', 'r') as f:
+                    self.__creds[key] = f.read().strip()
+            except Exception:
+                self.log.exception(f'Failed to load broker credentials for {key}')
+                return False
+        return True
+
+    def __get_db(self):
+        if self.client:
+            try:
+                return self.client[self.__creds.get('db')]
+            except Exception:
+                self.log.exception('Failed to get database object')
+        return None
+
+    def __get_collection(self, collection_name: str = 'jobs'):
+        db = self.__get_db()
+        if db is not None:
+            try:
+                return db[collection_name]
+            except Exception:
+                self.log.exception(f'Failed to get collection: {collection_name}')
+        return None
+
+    def update_one(self, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.update_one(query, update, upsert=upsert)
+            except OperationFailure as error:
+                self.log.error(f'Failed to update data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to update document: {query}')
+        return None
 
 
 class JobConsumer():
@@ -324,6 +385,7 @@ class Worker():
         self.log = get_logger()
         self.stop_trigger = Event()
         self.__consumer = JobConsumer(self.__job_request_handler, self.log)
+        self.__db = Mongo(self.log)
         if not self.__consumer.start():
             raise Exception('Failed to start job consumer')
 
@@ -347,7 +409,6 @@ class Worker():
         job = self.__convert_job_request(body)
         if job:
             self.run_job(job)
-            # toDO: update state in mongoDB
         try:
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception:
@@ -407,35 +468,42 @@ class Worker():
         return ''
 
     def __parse_playbook(self, job: Dict) -> str:
-        script_type = self.__parse_script_type(job.get('type'), job.get('name'))
+        script_type = self.__parse_script_type(job.get('script_type'), job.get('script_name'))
         if script_type:
             if script_type == 'ansible':
-                playbook = f'/app/ansible/playbooks/{job.get("name")}'
+                playbook = f'/app/ansible/playbooks/{job.get("script_name")}'
             else:
                 playbook = '/app/ansible/playbooks/run_job_script.yml'
                 job['extra_vars'] = {
-                    'script_file': job.get('name'),
+                    'script_file': job.get('script_name'),
                     'script_type': script_type,
-                    'script_args': job.get('args', []),
+                    'script_args': job.get('script_args', []),
                 }
             return playbook
         return ''
 
     def __handle_result(self, result: ansible_runner.runner.Runner, job: Dict):
+        job['state'] = 'completed'
         if result.rc == 0:
-            self.log.info(f"Job completed successfully: {job.get('_id')}")
-            return True
-        for ev in result.events:
-            if ev.get('event') == 'runner_on_failed':
-                data = ev.get('event_data', {})
-                task = data.get('task', 'unknown')
-                host = data.get('host', 'unknown')
-                msg = data.get('res', {}).get('stderr', '') or data.get('res', {}).get('msg', '')
-                self.log.error(f"Task '{task}' failed on host '{host}': {msg}")
-        return False
+            self.log.info(f"Job completed successfully: {job.get("name")} {job.get("_id")[:8]}")
+            job['result'] = True
+        else:
+            job['result'] = False
+            for event in result.events:
+                if event.get('event') == 'runner_on_failed':
+                    data = event.get('event_data', {})
+                    task = data.get('task', 'unknown')
+                    host = data.get('host', 'unknown')
+                    msg = data.get('res', {}).get('stderr', '') or data.get('res', {}).get('msg', '')
+                    error = f"Task '{task}' failed on host '{host}': {msg}"
+                    self.log.error(error)
+                    job['error'] = error
+                    break
+        self.__db.update_one({'_id': job.get('_id')}, {'$set': job})
+        return job['result']
 
     def run_job(self, job: Dict) -> bool:
-        self.log.info(f'Running job: {job.get("_id")}')
+        self.log.info(f'Running job: {job.get("name")} {job.get("_id")[:8]}')
         inventory = self.__parse_host_inventory(job.get('inventory'))
         playbook = self.__parse_playbook(job)
         if inventory and playbook:
@@ -459,23 +527,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-'''
-Job Request example:
-{
-    "_id": "job_id",
-    "inventory": "inventory.ini",  # or leave empty for localhost
-    "type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
-    "name": "job_name",
-    "args": [],
-    "kwargs": {}
-}
-
-jobs are listed by type:
-    - python3
-    - ansible
-    - bash
-    - php
-    - javascript
-'''
