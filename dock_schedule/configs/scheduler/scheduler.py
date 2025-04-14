@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 
-# import schedule
-# from random import choice
 import ssl
 import logging
 from time import sleep, gmtime
 from threading import Thread, Event
-# from queue import Queue, Empty
-# from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
-from json import dumps
+from json import dumps, load, loads
+from typing import List, Dict
+from urllib.parse import quote_plus
+from datetime import datetime, timedelta
 
+import schedule
 from pika import SelectConnection, BaseConnection, BasicProperties
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.credentials import PlainCredentials
 from pika.channel import Channel
 from pika.connection import ConnectionParameters, SSLOptions
+from pika.spec import Basic
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, OperationFailure
 
 
 def get_logger():
@@ -29,6 +32,154 @@ def get_logger():
         stream_handler.setFormatter(formatter)
         log.addHandler(stream_handler)
     return log
+
+
+class Mongo():
+    def __init__(self, logger: logging.Logger = None):
+        self.log = logger
+        self.__client: MongoClient | None = None
+        self.__creds = {'user': '', 'passwd': '', 'db': ''}
+
+    @property
+    def client(self):
+        if self.__client is None:
+            if self.__load_creds():
+                try:
+                    self.__client = MongoClient("mongodb://%s:%s@mongodb:27017/" % (
+                        quote_plus(self.__creds.get('user')), quote_plus(self.__creds.get('passwd'))))
+                except ConnectionFailure:
+                    self.log.exception('Failed to connect to MongoDB')
+                except Exception:
+                    self.log.exception('Failed to create MongoDB client')
+        return self.__client
+
+    def __load_creds(self):
+        for key in self.__creds.keys():
+            try:
+                with open(f'/run/secrets/mongo_{key}', 'r') as f:
+                    self.__creds[key] = f.read().strip()
+            except Exception:
+                self.log.exception(f'Failed to load broker credentials for {key}')
+                return False
+        return True
+
+    def __get_db(self):
+        if self.client:
+            try:
+                return self.client[self.__creds.get('db')]
+            except Exception:
+                self.log.exception('Failed to get database object')
+        return None
+
+    def __get_collection(self, collection_name: str = 'jobs'):
+        db = self.__get_db()
+        if db is not None:
+            try:
+                return db[collection_name]
+            except Exception:
+                self.log.exception(f'Failed to get collection: {collection_name}')
+        return None
+
+    def insert_one(self, document: dict):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.insert_one(document)
+            except OperationFailure as error:
+                self.log.error(f'Failed to insert document: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to insert document: {document}')
+        return None
+
+    def insert_many(self, documents: list[dict]):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.insert_many(documents)
+            except OperationFailure as error:
+                self.log.error(f'Failed to insert documents: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to insert documents: {documents}')
+        return None
+
+    def get_one(self, *filters: dict):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.find_one(*filters)
+            except OperationFailure as error:
+                self.log.error(f'Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception('Failed to find data')
+        return None
+
+    def get_all(self, *filters: dict):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return list(collection.find(*filters))
+            except OperationFailure as error:
+                self.log.error(f'Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception('Failed to query collection')
+        return []
+
+    def get_all_with_cursor(self, *filters: dict):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.find(*filters)
+            except OperationFailure as error:
+                self.log.error(f'Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception('Failed to query collection')
+        return None
+
+    def update_one(self, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.update_one(query, update, upsert=upsert)
+            except OperationFailure as error:
+                self.log.error(f'Failed to update data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to update document: {query}')
+        return None
+
+    def update_many(self, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                return collection.update_many(query, update, upsert=upsert)
+            except OperationFailure as error:
+                self.log.error(f'Failed to update data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to update documents: {query}')
+        return None
+
+    def delete_one(self, query: dict) -> bool:
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                collection.delete_one(query)
+                return True
+            except OperationFailure as error:
+                self.log.error(f'Failed to delete data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to delete document: {query}')
+        return False
+
+    def delete_many(self, query: dict) -> bool:
+        collection = self.__get_collection()
+        if collection is not None:
+            try:
+                collection.delete_many(query)
+                return True
+            except OperationFailure as error:
+                self.log.error(f'Failed to delete data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to delete documents: {query}')
+        return False
 
 
 class JobPublisher():
@@ -172,6 +323,7 @@ class JobPublisher():
         self.log.info('Successfully opened channel and set exchange')
         self.__channel = channel
         self.__channel.exchange_declare(self.__exchange, 'direct')
+        self.__channel.add_on_return_callback(self.__returned_to_sender_handler)
         self.__exchange_declared = True
         self.__reconnecting = False
         self.__conn_blocked = False
@@ -181,6 +333,21 @@ class JobPublisher():
         self.__channel = None
         self.__exchange_declared = False
         self.__queue_declared = False
+
+    def __returned_to_sender_handler(self, ch: Channel, _: Basic.Deliver, properties: BasicProperties, body: bytes):
+        try:
+            job_id = loads(body.decode()).get('_id')
+            self.log.error(f'Message returned for job ID {job_id}. Resending to queue...')
+            sleep(1)
+            ch.basic_publish(
+                exchange='',
+                routing_key='job_queue',
+                body=body,
+                properties=properties,
+                mandatory=True
+            )
+        except Exception:
+            self.log.error('Failed to resend message to queue')
 
     def __start_io_loop(self) -> bool:
         self.__client = self.__connect(self.__connect_success, self.__connect_failed, self.__connect_closed)
@@ -275,13 +442,13 @@ class JobPublisher():
             return self.__can_send()
         return False
 
-    def send_msg(self, msg: bytes):
+    def send_msg(self, msg: bytes, job_id: str):
         if isinstance(msg, bytes):
             if self.__can_send():
                 try:
                     properties = BasicProperties(content_type='application/octet-stream', delivery_mode=2)
                     self.__channel.basic_publish(self.__exchange, self.__route, msg, properties)
-                    self.log.info(f'Sent message to queue: {msg}')
+                    self.log.info(f'Sent job to queue: {job_id[:8]}')
                     return True
                 except Exception:
                     self.log.exception('Failed to send message to queue')
@@ -319,47 +486,89 @@ class JobScheduler():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
-        self.publisher = JobPublisher(self.log)
-        if not self.publisher.start():
+        self.__publisher = JobPublisher(self.log)
+        self.__db = Mongo(self.log)
+        self._crons = schedule
+        if not self.__publisher.start():
             raise Exception('Failed to start job publisher')
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_):
-        self.publisher.stop()
+        self.__publisher.stop()
+
+    def __create_cron_job(self, cron: Dict):
+        freq = cron.get('frequency')
+        if freq == 'second':
+            if cron.get('interval'):
+                return self._crons.every(cron['interval']).seconds.do(self._run_cron, cron)
+        elif freq == 'minute':
+            if cron.get('at'):
+                return self._crons.every().minute.at(cron['at'], cron.get('timezone', 'UTC')).do(self._run_cron, cron)
+            if cron.get('interval'):
+                return self._crons.every(cron['interval']).minutes.do(self._run_cron, cron)
+        elif freq == 'hour':
+            if cron.get('at'):
+                return self._crons.every().hour.at(cron['at'], cron.get('timezone', 'UTC')).do(self._run_cron, cron)
+            if cron.get('interval'):
+                return self._crons.every(cron['interval']).hours.do(self._run_cron, cron)
+        elif freq == 'day':
+            if cron.get('at'):
+                return self._crons.every().day.at(cron['at']).do(self._run_cron, cron)
+            if cron.get('interval'):
+                return self._crons.every(cron['interval']).days.do(self._run_cron, cron)
+        self.log.error(f'Unknown schedule frequency: {freq}')
+        return None
+
+    def __load_cron_file(self) -> List:
+        try:
+            with open('/app/crons.json', 'r') as file:
+                return load(file)
+        except Exception:
+            self.log.exception('Failed to load cron file')
+            return []
+
+    def _run_cron(self, cron: Dict):
+        try:
+            job_id = str(uuid4())
+            job = {
+                '_id': job_id,
+                'name': cron.get('name', ''),
+                'script_type': cron.get('script_type', 'python3'),
+                'script_name': cron.get('script_name', ''),
+                'script_args': cron.get('script_args', []),
+                'inventory': cron.get('inventory', {}),
+                'extra_vars': cron.get('extra_vars', {}),
+                'state': 'pending',
+                'result': None,
+                'error': None,
+            }
+            self.__publisher.send_msg(dumps(job).encode(), job_id)
+            job['expiry_time'] = timedelta(days=7) + datetime.now()
+        except Exception:
+            self.log.exception('Failed to send job to broker')
+            return False
+        return bool(self.__db.insert_one(job))
+
+    def set_cron_schedule(self):
+        for cron in self.__load_cron_file():
+            cron: Dict
+            if cron.get('active', False):
+                if not self.__create_cron_job(cron):
+                    self.log.error(f'Failed to create cron job for {cron.get("name")}')
+                    return False
+        return True
 
 
 def main():
-    payload1 = {'_id': uuid4().hex, 'type': 'python3', 'name': 'test.py', 'args': ['0'], 'inventory': {}}
-    payload2 = {'_id': uuid4().hex, 'type': 'python3', 'name': 'test.py', 'args': ['1'], 'inventory': {}}
-    payload3 = {'_id': uuid4().hex, 'type': 'bash', 'name': 'test.sh', 'args': ['0'], 'inventory': {}}
-    payload4 = {'_id': uuid4().hex, 'type': 'bash', 'name': 'test.sh', 'args': ['1'], 'inventory': {}}
-    payload5 = {'_id': uuid4().hex, 'type': 'node', 'name': 'test.js', 'args': ['0'], 'inventory': {}}
-    payload6 = {'_id': uuid4().hex, 'type': 'node', 'name': 'test.js', 'args': ['1'], 'inventory': {}}
-    payload7 = {'_id': uuid4().hex, 'type': 'php', 'name': 'test.php', 'args': ['0'], 'inventory': {}}
-    payload8 = {'_id': uuid4().hex, 'type': 'php', 'name': 'test.php', 'args': ['1'], 'inventory': {}}
-    sent = False
     with JobScheduler() as scheduler:
+        if not scheduler.set_cron_schedule():
+            exit(1)
         while not scheduler.stop_trigger.is_set():
-            if not sent:
-                scheduler.publisher.send_msg(dumps(payload1).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload2).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload3).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload4).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload5).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload6).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload7).encode())
-                sleep(2)
-                scheduler.publisher.send_msg(dumps(payload8).encode())
-                sent = True
+            scheduler._crons.run_pending()
             sleep(1)
+    exit(0)
 
 
 if __name__ == "__main__":
@@ -367,6 +576,21 @@ if __name__ == "__main__":
 
 
 '''
+cron job example:
+{
+    "name": "job_name",
+    "script_type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
+    "script_name": "job_name.py",  # the name of the script to run
+    "script_args": [],  # arguments to pass to the script
+    "frequency": "minute",  # second, minute, hour, day
+    "at": "00:00",  # time to run the job
+    "interval": 1,  # interval to run the job
+    "timezone": "UTC",  # timezone to run the job
+    "inventory": {}  # or leave empty for localhost
+    "extra_vars": {},  # extra vars for ansible jobs
+    'active': True  # if the job is active or not
+}
+
 test case
 create a series of different jobs that the workers can run
 send the jobs to workers based on a cron schedule
@@ -381,7 +605,6 @@ Job Request example:
     "extra_vars": {}  # extra vars for ansible jobs
 }
 
-
 inventory = [
     {
         'name': 'node1',
@@ -389,11 +612,32 @@ inventory = [
     }
 ]
 
-
 jobs are listed by type:
     - python3
     - ansible
     - bash
     - php
     - javascript
+
+{
+    "name": "Test Job Successful",
+    "script_type": "python3",
+    "script_name": "test.py",
+    "script_args": ["0"],
+    "frequency": "minute",
+    "interval": 1,
+    "active": true
+}
+
+{
+    "name": "Test Job Fail",
+    "script_type": "python3",
+    "script_name": "test.py",
+    "script_args": ["1"],
+    "frequency": "minute",
+    "interval": 2,
+    "active": true
+}
+
+
 '''

@@ -110,17 +110,46 @@ services:
       timeout: 5s
       retries: 3
 
+  mongodb:
+    image: mongodb:latest
+    build: /opt/dock-schedule/mongodb
+    volumes:
+      - /mnt/swarm-share/mongodb:/data/db
+    networks:
+      - dock-schedule-job-db
+      - dock-schedule-metrics
+    secrets:
+      - mongo_user
+      - mongo_passwd
+      - mongo_db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'docker-entrypoint.py mongod']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   scheduler:
     image: scheduler:latest
     build: /opt/dock-schedule/scheduler
     volumes:
       - /opt/dock-schedule/scheduler/scheduler.py:/app/scheduler.py
+      - /mnt/swarm-share/jobs/crons.json:/app/crons.json
     networks:
       - dock-schedule-broker
+      - dock-schedule-job-db
     secrets:
       - broker_user
       - broker_passwd
       - broker_vhost
+      - mongo_user
+      - mongo_passwd
+      - mongo_db
     deploy:
       replicas: 1
       restart_policy:
@@ -142,10 +171,14 @@ services:
       - /mnt/swarm-share/jobs:/app/jobs
     networks:
       - dock-schedule-broker
+      - dock-schedule-job-db
     secrets:
       - broker_user
       - broker_passwd
       - broker_vhost
+      - mongo_user
+      - mongo_passwd
+      - mongo_db
     deploy:
       replicas: 1
       restart_policy:
@@ -163,9 +196,12 @@ networks:
     name: dock-schedule-metrics
     driver: overlay
     external: true
-
   dock-schedule-broker:
     name: dock-schedule-broker
+    driver: overlay
+    external: true
+  dock-schedule-job-db:
+    name: dock-schedule-job-db
     driver: overlay
     external: true
 
@@ -175,4 +211,10 @@ secrets:
   broker_passwd:
     external: true
   broker_vhost:
+    external: true
+  mongo_user:
+    external: true
+  mongo_passwd:
+    external: true
+  mongo_db:
     external: true
