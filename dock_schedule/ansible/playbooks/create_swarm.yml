@@ -6,11 +6,24 @@
   vars:
     advertise_addr: "{{ ansible_default_ipv4.address }}"
   tasks:
+
+    - name: Install NFS
+      ansible.builtin.import_tasks: tasks/install_nfs.yml
+
+    - name: Start NFS server
+      ansible.builtin.import_tasks: tasks/start_nfs_server_service.yml
+
     - name: Install Docker
-      ansible.builtin.import_tasks: tasks/install_docker_tasks.yml
+      ansible.builtin.import_tasks: tasks/install_docker.yml
 
     - name: Create Swarm
-      ansible.builtin.import_tasks: tasks/create_swarm_tasks.yml
+      ansible.builtin.import_tasks: tasks/create_swarm.yml
 
     - name: Add Swarm Firewall Rules
-      ansible.builtin.import_tasks: tasks/add_swarm_firewall_rule_tasks.yml
+      ansible.builtin.import_tasks: tasks/add_swarm_firewall_rules.yml
+
+    - name: Build Docker Swarm Services
+      ansible.builtin.import_tasks: tasks/build_containers.yml
+
+    - name: Start Swarm Services
+      ansible.builtin.import_tasks: tasks/start_swarm_services.yml

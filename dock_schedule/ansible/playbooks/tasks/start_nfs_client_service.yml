@@ -1,0 +1,5 @@
+- name: Enable and start NFS client
+  ansible.builtin.systemd:
+    name: nfs-client.target
+    state: started
+    enabled: true

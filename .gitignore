@@ -177,4 +177,4 @@ notes.txt
 
 .ansible/
 
-dock_schedule/configs/grafana/dashboards/*
+dock_schedule/services/grafana/dashboards/*

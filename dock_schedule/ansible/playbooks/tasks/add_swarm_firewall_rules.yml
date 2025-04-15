@@ -1,8 +1,13 @@
-- name: Enable and start Firewalld
+- name: Install Firewalld
+  ansible.builtin.package:
+    name: firewalld
+    state: present
+
+- name: Start Firewalld
   ansible.builtin.systemd:
     name: firewalld
-    enabled: true
     state: started
+    enabled: true
 
 - name: Open Swarm TCP management port (2377)
   ansible.posix.firewalld:
@@ -24,6 +29,13 @@
 - name: Open overlay network port (4789/udp)
   ansible.posix.firewalld:
     port: 4789/udp
+    permanent: true
+    state: enabled
+    immediate: true
+
+- name: Open NFS port (2049/tcp)
+  ansible.posix.firewalld:
+    port: 2049/tcp
     permanent: true
     state: enabled
     immediate: true

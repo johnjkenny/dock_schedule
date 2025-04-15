@@ -6,7 +6,7 @@ try:
         name='dock-schedule',
         version='1.0.0',
         entry_points={'console_scripts': [
-            'dschedule = dock_sched.cli:parent',
+            'dschedule = dock_schedule.cli:parent',
         ]},
     )
     exit(0)

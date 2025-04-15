@@ -1,0 +1,8 @@
+- name: Copy dock-schedule files
+  ansible.builtin.copy:
+    src: /opt/dock-schedule
+    dest: /opt/dock-schedule
+    owner: root
+    group: root
+    mode: '0755'
+    recursive: true

@@ -1,0 +1,14 @@
+- name: Create mongodb group
+  ansible.builtin.group:
+    name: mongodb
+    gid: 3002
+    state: present
+
+- name: Create mongodb user
+  ansible.builtin.user:
+    name: mongodb
+    uid: 3002
+    group: mongodb
+    shell: /sbin/nologin
+    create_home: false
+    state: present

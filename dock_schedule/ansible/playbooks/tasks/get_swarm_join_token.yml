@@ -1,0 +1,4 @@
+- name: Get join-token
+  ansible.builtin.command: docker swarm join-token -q worker
+  register: worker_token
+  changed_when: true
