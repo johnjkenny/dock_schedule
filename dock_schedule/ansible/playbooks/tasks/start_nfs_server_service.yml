@@ -1,0 +1,21 @@
+- name: Enable and start NFS server
+  ansible.builtin.systemd:
+    name: nfs-server
+    state: started
+    enabled: true
+
+- name: Parse Export Subnet
+  set_fact:
+    export_subnet: "{{ advertise_addr | regex_replace('(\\d+)$', '0') }}/24"
+
+- name: Create Swarm-Share NFS Export
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    line: "/mnt/swarm-share {{ export_subnet }}(rw,sync,no_subtree_check,no_root_squash)"
+    state: present
+    create: true
+    insertafter: EOF
+
+- name: Update NFS Exports
+  ansible.builtin.command: exportfs -ra
+  changed_when: true

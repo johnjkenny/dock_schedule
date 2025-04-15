@@ -1,6 +1,10 @@
-FROM mongodb/mongodb-community-server:7.0.3-ubuntu2204
+FROM mongodb/mongodb-community-server:7.0.16-ubuntu2204
 
 USER root
+RUN userdel mongodb
+RUN groupdel mongodb
+RUN groupadd -g 3002 mongodb
+RUN useradd -u 3002 -g 3002 -s /bin/sh -d /data/db mongodb
 COPY init.js /docker-entrypoint-initdb.d/init.js
 COPY docker-entrypoint.sh /custom-entrypoint.sh
 RUN chown mongodb:mongodb /docker-entrypoint-initdb.d/init.js /custom-entrypoint.sh

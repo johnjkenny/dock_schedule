@@ -112,9 +112,9 @@ services:
 
   mongodb:
     image: mongodb:latest
-    build: /opt/dock-schedule/mongodb
+    build: /opt/dock-schedule/mongo
     volumes:
-      - /mnt/swarm-share/mongodb:/data/db
+      - /mnt/swarm-share/mongo:/data/db
     networks:
       - dock-schedule-job-db
       - dock-schedule-metrics

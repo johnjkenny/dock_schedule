@@ -1,0 +1,5 @@
+- name: Build docker images
+  ansible.builtin.command: docker compose build
+  args:
+    chdir: /opt/dock-schedule
+  changed_when: true
