@@ -1,10 +1,11 @@
 FROM rabbitmq:4
 
 RUN groupmod -g 3001 rabbitmq && usermod -u 3001 rabbitmq -g 3001
-RUN mkdir -p /etc/rabbitmq/certs
 COPY rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
 COPY docker-entrypoint.sh /custom-entrypoint.sh
-RUN chmod 644 /etc/rabbitmq/rabbitmq.conf
+COPY broker.* /etc/rabbitmq/
+COPY dock-schedule-ca.crt /etc/rabbitmq/
+RUN chmod 644 /etc/rabbitmq/rabbitmq.conf /etc/rabbitmq/broker.crt /etc/rabbitmq/broker.key /etc/rabbitmq/dock-schedule-ca.crt
 RUN chmod +x /custom-entrypoint.sh
 RUN rabbitmq-plugins enable rabbitmq_management rabbitmq_prometheus
 

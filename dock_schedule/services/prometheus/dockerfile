@@ -1,6 +1,7 @@
 FROM prom/prometheus:latest
 
 USER root
-COPY prometheus.yml /etc/prometheus/
-COPY web_config.yml /etc/prometheus/
-RUN chmod 440 /etc/prometheus/*.yml
+COPY *.yml /etc/prometheus/
+COPY prometheus.* /etc/prometheus/
+COPY dock-schedule-ca.crt /etc/prometheus/
+RUN chmod 440 /etc/prometheus/*.yml /etc/prometheus/prometheus.crt /etc/prometheus/prometheus.key /etc/prometheus/dock-schedule-ca.crt

@@ -22,10 +22,16 @@ scrape_configs:
         target_label: instance
 
   - job_name: Broker-Scrape
+    scheme: https
+    tls_config:
+      ca_file: /etc/prometheus/dock-schedule-ca.crt
+      cert_file: /etc/prometheus/prometheus.crt
+      key_file: /etc/prometheus/prometheus.key
+      insecure_skip_verify: false  # only use true if self-signed and testing
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock
         role: tasks
-        port: 15692
+        port: 15691
     relabel_configs:
       - source_labels: [__meta_dockerswarm_container_label_prometheus_job]
         regex: broker-stats
@@ -37,6 +43,7 @@ scrape_configs:
         regex: dock-schedule-metrics
         action: keep
       - source_labels: [__address__]
-        regex: (.+):\d+
-        replacement: $1:15692
+        # regex: (.+):\d+
+        # replacement: $1:15691
+        replacement: broker:15691
         target_label: __address__
