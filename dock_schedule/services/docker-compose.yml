@@ -16,11 +16,11 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 3
-    # healthcheck:
-    #  test: ['CMD', 'pgrep', '-f', 'nginx -g daemon off']
-    #  interval: 10s
-    #  timeout: 5s
-    #  retries: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'nginx -g daemon off']
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   scraper:
     image: scraper:latest

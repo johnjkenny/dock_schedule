@@ -4,7 +4,20 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
+    basicAuth: false
+    withCredentials: false
     orgId: 1
     url: https://proxy:8080
     isDefault: true
     editable: true
+    jsonData:
+      tlsSkipVerify: false
+      tlsAuthWithCACert: true
+      tlsAuth: true
+    secureJsonData:
+      tlsCACert: |
+        CA_CERT
+      tlsClientCert: |
+        CLIENT_CERT
+      tlsClientKey: |
+        CLIENT_KEY
