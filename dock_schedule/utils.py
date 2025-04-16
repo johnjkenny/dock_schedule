@@ -45,7 +45,7 @@ class Init():
 
     def create_swarm_dir_tree(self):
         self.log.info('Creating swarm directory tree')
-        for path in ['ansible/playbooks', 'broker', 'grafana', 'jobs', 'mongo', 'prometheus']:
+        for path in ['ansible/playbooks', 'broker', 'grafana', 'jobs', 'mongo', 'prometheus', 'proxy']:
             try:
                 Path('/mnt/swarm-share/' + path).mkdir(parents=True, exist_ok=True)
             except Exception:
@@ -121,7 +121,8 @@ class Init():
         return False
 
     def __generate_container_ssl_certs(self):
-        for service in ['broker', 'grafana', 'mongo', 'prometheus', 'scheduler', 'scraper', 'worker']:
+        # for service in ['broker', 'grafana', 'mongo', 'prometheus', 'scheduler', 'scraper', 'worker', 'proxy']:
+        for service in ['proxy']:
             if not self.certs.create(service, [service, 'localhost', '127.0.0.1']):
                 self.log.error(f'Failed to create certificate for {service}')
                 return False
@@ -171,7 +172,9 @@ class Init():
         for method in [
             # self.__create_service_users, self.create_swarm_dir_tree, self.create_dock_schedule_dir_tree,
             # self.init_cert_store,
-            self.create_docker_swarm]:
+            self.__generate_container_ssl_certs,
+            # self.create_docker_swarm
+            ]:
             if not method():
                 return False
         self.log.info('Successfully initialized dock-schedule')
