@@ -121,8 +121,8 @@ class Init():
         return False
 
     def __generate_container_ssl_certs(self):
-        # for service in ['broker', 'grafana', 'mongo', 'prometheus', 'scheduler', 'scraper', 'worker', 'proxy']:
-        for service in ['proxy']:
+        # for service in ['broker', 'grafana', 'mongodb', 'prometheus', 'scheduler', 'scraper', 'worker', 'proxy']:
+        for service in ['mongodb']:
             if not self.certs.create(service, [service, 'localhost', '127.0.0.1']):
                 self.log.error(f'Failed to create certificate for {service}')
                 return False
