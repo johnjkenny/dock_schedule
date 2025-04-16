@@ -41,12 +41,21 @@ class Mongo():
         self.__creds = {'user': '', 'passwd': '', 'db': ''}
 
     @property
+    def __host(self):
+        return "mongodb://%s:%s@mongodb:27017/" % (quote_plus(self.__creds.get('user')),
+                                                   quote_plus(self.__creds.get('passwd')))
+
+    @property
     def client(self):
         if self.__client is None:
             if self.__load_creds():
                 try:
-                    self.__client = MongoClient("mongodb://%s:%s@mongodb:27017/" % (
-                        quote_plus(self.__creds.get('user')), quote_plus(self.__creds.get('passwd'))))
+                    self.__client = MongoClient(
+                        host=self.__host,
+                        tls=True,
+                        tlsCAFile='/app/dock-schedule-ca.crt',
+                        tlsCertificateKeyFile='/app/scheduler.pem',
+                    )
                 except ConnectionFailure:
                     self.log.exception('Failed to connect to MongoDB')
                 except Exception:
@@ -619,25 +628,26 @@ jobs are listed by type:
     - php
     - javascript
 
-{
-    "name": "Test Job Successful",
-    "script_type": "python3",
-    "script_name": "test.py",
-    "script_args": ["0"],
-    "frequency": "minute",
-    "interval": 1,
-    "active": true
-}
-
-{
-    "name": "Test Job Fail",
-    "script_type": "python3",
-    "script_name": "test.py",
-    "script_args": ["1"],
-    "frequency": "minute",
-    "interval": 2,
-    "active": true
-}
+[
+    {
+        "name": "Test Job Successful",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["0"],
+        "frequency": "second",
+        "interval": 30,
+        "active": true
+    },
+    {
+        "name": "Test Job Fail",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["1"],
+        "frequency": "minute",
+        "interval": 1,
+        "active": true
+    }
+]
 
 
 '''
