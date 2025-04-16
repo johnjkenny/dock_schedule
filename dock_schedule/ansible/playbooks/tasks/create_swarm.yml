@@ -3,7 +3,7 @@
   changed_when: true
 
 - name: Create Metrics Network
-  ansible.builtin.command: "docker network create dock-schedule-metrics --driver overlay --attachable"
+  ansible.builtin.command: "docker network create dock-schedule-proxy --driver overlay --attachable"
   changed_when: true
 
 - name: Create Broker Network

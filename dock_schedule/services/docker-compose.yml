@@ -1,4 +1,27 @@
 services:
+  proxy:
+    image: proxy:latest
+    build: /opt/dock-schedule/proxy
+    volumes:
+      - /opt/dock-schedule/proxy/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    networks:
+      - dock-schedule-proxy
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    # healthcheck:
+    #  test: ['CMD', 'pgrep', '-f', 'nginx -g daemon off']
+    #  interval: 10s
+    #  timeout: 5s
+    #  retries: 3
+
   scraper:
     image: scraper:latest
     build: /opt/dock-schedule/scraper
@@ -12,9 +35,9 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-      # - '--web.config.file=/etc/prometheus/web_config.yml'
+      - '--web.config.file=/etc/prometheus/web_config.yml'
     networks:
-      - dock-schedule-metrics
+      - dock-schedule-proxy
     deploy:
       mode: global
       restart_policy:
@@ -34,12 +57,13 @@ services:
     build: /opt/dock-schedule/broker
     volumes:
       - /mnt/swarm-share/broker:/var/lib/rabbitmq
+      - /opt/dock-schedule/broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
     secrets:
       - broker_user
       - broker_passwd
       - broker_vhost
     networks:
-      - dock-schedule-metrics
+      - dock-schedule-proxy
       - dock-schedule-broker
     ports:
       - 5672:5672
@@ -65,7 +89,7 @@ services:
     user: root
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      # - '--web.config.file=/etc/prometheus/web_config.yml'
+      - '--web.config.file=/etc/prometheus/web_config.yml'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /mnt/swarm-share/prometheus:/prometheus
@@ -117,7 +141,7 @@ services:
       - /mnt/swarm-share/mongo:/data/db
     networks:
       - dock-schedule-job-db
-      - dock-schedule-metrics
+      - dock-schedule-proxy
     secrets:
       - mongo_user
       - mongo_passwd
@@ -133,29 +157,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
-  proxy:
-    image: proxy:latest
-    build: /opt/dock-schedule/proxy
-    volumes:
-      - /opt/dock-schedule/proxy/nginx.conf:/etc/nginx/nginx.conf
-    ports:
-      - 80:80
-      - 443:443
-      - 8080:8080
-    networks:
-      - dock-schedule-proxy
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-    # healthcheck:
-    #  test: ['CMD', 'pgrep', '-f', 'nginx']
-    #  interval: 10s
-    #  timeout: 5s
-    #  retries: 3
 
   scheduler:
     image: scheduler:latest
@@ -215,10 +216,6 @@ services:
       retries: 3
 
 networks:
-  dock-schedule-metrics:
-    name: dock-schedule-metrics
-    driver: overlay
-    external: true
   dock-schedule-broker:
     name: dock-schedule-broker
     driver: overlay
