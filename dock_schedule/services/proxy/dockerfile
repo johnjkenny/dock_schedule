@@ -1,0 +1,6 @@
+FROM nginx:latest
+
+COPY nginx.conf proxy.* dock-schedule-ca.crt /etc/nginx/
+RUN chown nginx:root /etc/nginx/nginx.conf /etc/nginx/dock-schedule-ca.crt /etc/nginx/proxy.*
+RUN chmod 440 /etc/nginx/nginx.* /etc/nginx/dock-schedule-ca.crt /etc/nginx/proxy.*
+RUN apt-get update && apt-get install -y procps

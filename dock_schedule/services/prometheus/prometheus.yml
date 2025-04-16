@@ -4,6 +4,14 @@ global:
 
 scrape_configs:
   - job_name: Node-Scrape
+    scheme: https
+    params:
+      ip: [$1]
+    tls_config:
+      ca_file: /etc/prometheus/dock-schedule-ca.crt
+      cert_file: /etc/prometheus/prometheus.crt
+      key_file: /etc/prometheus/prometheus.key
+      insecure_skip_verify: false
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock
         role: tasks
@@ -16,18 +24,26 @@ scrape_configs:
         regex: running
         action: keep
       - source_labels: [__meta_dockerswarm_network_name]
-        regex: dock-schedule-metrics
+        regex: dock-schedule-proxy
         action: keep
+      - source_labels: [__address__]
+        regex: (.+):\d+
+        target_label: __param_ip
+      - source_labels: [__address__]
+        replacement: proxy:8081
+        target_label: __address__
       - source_labels: [__meta_dockerswarm_node_hostname]
         target_label: instance
 
   - job_name: Broker-Scrape
     scheme: https
+    params:
+      host: [broker]
     tls_config:
       ca_file: /etc/prometheus/dock-schedule-ca.crt
       cert_file: /etc/prometheus/prometheus.crt
       key_file: /etc/prometheus/prometheus.key
-      insecure_skip_verify: false  # only use true if self-signed and testing
+      insecure_skip_verify: false
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock
         role: tasks
@@ -40,10 +56,11 @@ scrape_configs:
         regex: running
         action: keep
       - source_labels: [__meta_dockerswarm_network_name]
-        regex: dock-schedule-metrics
+        regex: dock-schedule-proxy
         action: keep
       - source_labels: [__address__]
-        # regex: (.+):\d+
-        # replacement: $1:15691
-        replacement: broker:15691
+        replacement: proxy:8082
         target_label: __address__
+      - source_labels: [instance]
+        replacement: broker
+        target_label: instance
