@@ -3,5 +3,9 @@ FROM grafana/grafana:latest
 USER root
 RUN deluser grafana
 RUN adduser --uid 3000 --disabled-password --home /usr/share/grafana grafana
-COPY grafana.ini /etc/grafana/grafana.ini
+COPY grafana.* /etc/grafana/
+COPY dock-schedule-ca.crt /etc/grafana/
+COPY docker-entrypoint.sh /custom-entrypoint.sh
 COPY datasources.yml /etc/grafana/provisioning/datasources/datasources.yml
+RUN chmod +x /custom-entrypoint.sh
+ENTRYPOINT ["/custom-entrypoint.sh"]
