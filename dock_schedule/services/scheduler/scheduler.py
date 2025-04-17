@@ -269,10 +269,12 @@ class JobPublisher():
 
     def __create_connection_ssl_obj(self):
         try:
-            context = ssl.create_default_context(cafile='')
-            context.load_cert_chain('', '')
-            context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
-            return SSLOptions(context, 'sg_cluster_broker')
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_verify_locations('/app/dock-schedule-ca.crt')
+            context.load_cert_chain('/app/scheduler.crt', '/app/scheduler.key')
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.check_hostname = True
+            return SSLOptions(context, 'broker')
         except Exception:
             self.log.exception('Failed to create SSL context for broker connection')
         return None
@@ -280,19 +282,20 @@ class JobPublisher():
     def __create_connection_parameters(self):
         creds: dict = self.__load_credentials()
         if creds:
-            # ssl = self.__create_connection_ssl_obj()
-            # if ssl:
-            try:
-                return ConnectionParameters(
-                    host='broker',
-                    port=5672,
-                    virtual_host=creds.get('vhost', '/'),
-                    credentials=PlainCredentials(creds.get('user', ''), creds.get('passwd', '')),
-                    heartbeat=15,
-                    blocked_connection_timeout=20
-                )
-            except Exception:
-                self.log.exception('Failed to create connection parameters')
+            ssl = self.__create_connection_ssl_obj()
+            if ssl:
+                try:
+                    return ConnectionParameters(
+                        host='broker',
+                        port=5671,
+                        virtual_host=creds.get('vhost', '/'),
+                        credentials=PlainCredentials(creds.get('user', ''), creds.get('passwd', '')),
+                        heartbeat=15,
+                        blocked_connection_timeout=20,
+                        ssl_options=ssl
+                    )
+                except Exception:
+                    self.log.exception('Failed to create connection parameters')
         return None
 
     def __reconnect_attempt(self):
@@ -349,8 +352,8 @@ class JobPublisher():
             self.log.error(f'Message returned for job ID {job_id}. Resending to queue...')
             sleep(1)
             ch.basic_publish(
-                exchange='',
-                routing_key='job_queue',
+                exchange=self.__exchange,
+                routing_key=self.__route,
                 body=body,
                 properties=properties,
                 mandatory=True

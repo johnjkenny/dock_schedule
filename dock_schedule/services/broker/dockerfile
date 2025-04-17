@@ -5,6 +5,7 @@ COPY rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
 COPY docker-entrypoint.sh /custom-entrypoint.sh
 COPY broker.* /etc/rabbitmq/
 COPY dock-schedule-ca.crt /etc/rabbitmq/
+RUN chown -R rabbitmq:root /etc/rabbitmq
 RUN chmod 644 /etc/rabbitmq/rabbitmq.conf /etc/rabbitmq/broker.crt /etc/rabbitmq/broker.key /etc/rabbitmq/dock-schedule-ca.crt
 RUN chmod +x /custom-entrypoint.sh
 RUN rabbitmq-plugins enable rabbitmq_management rabbitmq_prometheus
