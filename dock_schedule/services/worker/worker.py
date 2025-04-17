@@ -40,12 +40,21 @@ class Mongo():
         self.__creds = {'user': '', 'passwd': '', 'db': ''}
 
     @property
+    def __host(self):
+        return "mongodb://%s:%s@mongodb:27017/" % (quote_plus(self.__creds.get('user')),
+                                                   quote_plus(self.__creds.get('passwd')))
+
+    @property
     def client(self):
         if self.__client is None:
             if self.__load_creds():
                 try:
-                    self.__client = MongoClient("mongodb://%s:%s@mongodb:27017/" % (
-                        quote_plus(self.__creds.get('user')), quote_plus(self.__creds.get('passwd'))))
+                    self.__client = MongoClient(
+                        host=self.__host,
+                        tls=True,
+                        tlsCAFile='/app/dock-schedule-ca.crt',
+                        tlsCertificateKeyFile='/app/worker.pem',
+                    )
                 except ConnectionFailure:
                     self.log.exception('Failed to connect to MongoDB')
                 except Exception:
