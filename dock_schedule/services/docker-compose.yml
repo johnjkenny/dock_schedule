@@ -99,6 +99,9 @@ services:
     networks:
       - dock-schedule-proxy
     deploy:
+      placement:
+        constraints:
+          - node.role == manager
       replicas: 1
       restart_policy:
         condition: on-failure
@@ -177,6 +180,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    labels:
+      - prometheus-job=mongo-stats
 
   scheduler:
     image: scheduler:latest

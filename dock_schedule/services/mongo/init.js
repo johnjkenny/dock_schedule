@@ -6,7 +6,11 @@ try {
   db.createUser({
     user: "MONGO_USER",
     pwd: "MONGO_PASS",
-    roles: [{ role: "readWriteAnyDatabase", db: "admin" }]
+    roles: [
+      { role: "readWriteAnyDatabase", db: "admin" },
+      { role: "clusterMonitor", db: "admin" },
+      { role: "readAnyDatabase", db: "admin" }
+    ]
   });
 
   db = db.getSiblingDB("MONGO_DB");
