@@ -22,9 +22,28 @@ services:
       timeout: 5s
       retries: 3
 
-  scraper:
-    image: scraper:latest
-    build: /opt/dock-schedule/scraper
+  proxy_scraper:
+    image: proxy_scraper:latest
+    build: /opt/dock-schedule/proxy_scraper
+    networks:
+      - dock-schedule-proxy
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'bin/nginx-prometheus-exporter']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - prometheus-job=proxy-stats
+
+  node_scraper:
+    image: node_scraper:latest
+    build: /opt/dock-schedule/node_scraper
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -50,7 +69,7 @@ services:
       timeout: 5s
       retries: 3
     labels:
-      - prometheus-job=node-exporter
+      - prometheus-job=node-stats
 
   broker:
     image: broker:latest
@@ -65,10 +84,6 @@ services:
     networks:
       - dock-schedule-proxy
       - dock-schedule-broker
-    ports:
-      - 5672:5672
-      - 15672:15672
-      - 15692:15692
     deploy:
       replicas: 1
       restart_policy:
@@ -94,8 +109,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /mnt/swarm-share/prometheus:/prometheus
       - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - 9090:9090
     networks:
       - dock-schedule-proxy
     deploy:

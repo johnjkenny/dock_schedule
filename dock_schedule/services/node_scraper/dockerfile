@@ -1,0 +1,7 @@
+FROM prom/node-exporter:latest
+
+USER root
+COPY web_config.yml /etc/prometheus/
+COPY node_scraper.* /etc/prometheus/
+COPY dock-schedule-ca.crt /etc/prometheus/
+RUN chmod 440 /etc/prometheus/*.yml /etc/prometheus/node_scraper.crt /etc/prometheus/node_scraper.key /etc/prometheus/dock-schedule-ca.crt
