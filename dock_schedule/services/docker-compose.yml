@@ -114,12 +114,10 @@ services:
     image: grafana:latest
     environment:
       - GF_LIVE_ENABLED=false
-      # - GF_FEATURE_TOGGLES_ENABLE=publicDashboards
     build: /opt/dock-schedule/grafana
     volumes:
       - /mnt/swarm-share/grafana:/var/lib/grafana
-    ports:
-      - 3000:3000
+      - /opt/dock-schedule/grafana/grafana.ini:/etc/grafana/grafana.ini
     networks:
       - dock-schedule-proxy
     deploy:

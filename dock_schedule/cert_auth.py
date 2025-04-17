@@ -180,7 +180,7 @@ class CertStore():
         return self.__define_cert(self.__subject, self.__private_key, True)
 
     def _initialize_cert_authority(self, force: bool = False) -> bool:
-        """Initialize the cluster certificate authority
+        """Initialize the certificate authority
 
         Args:
             force (bool, optional): Force the initialization. Defaults to False.
