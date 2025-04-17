@@ -4,9 +4,11 @@ FROM python:3.13-slim
 WORKDIR /app
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY requirements.txt /app/requirements.txt
-COPY worker.py /app/worker2.py
+COPY worker.* /app/
+COPY dock-schedule-ca.crt /app/
+RUN cat /app/worker.crt /app/worker.key > /app/worker.pem
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
-RUN chmod +x /app/docker-entrypoint.sh /app/worker2.py
+RUN chmod +x /app/docker-entrypoint.sh /app/worker.py
 RUN apt update && apt install -y procps php-cli nodejs npm
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
