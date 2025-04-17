@@ -9,7 +9,7 @@ try {
     roles: [
       { role: "readWriteAnyDatabase", db: "admin" },
       { role: "clusterMonitor", db: "admin" },
-      { role: "readAnyDatabase", db: "admin" }
+      { role: "read", db:"local"}
     ]
   });
 
