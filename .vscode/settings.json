@@ -32,6 +32,7 @@
         "getent",
         "gmtime",
         "healthcheck",
+        "indexstats",
         "initdb",
         "insertafter",
         "ioloop",

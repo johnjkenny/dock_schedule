@@ -64,3 +64,33 @@ scrape_configs:
       - source_labels: [instance]
         replacement: broker
         target_label: instance
+
+  - job_name: Mongo-Scrape
+    scheme: https
+    params:
+      host: [mongodb_scraper]
+    tls_config:
+      ca_file: /etc/prometheus/dock-schedule-ca.crt
+      cert_file: /etc/prometheus/prometheus.crt
+      key_file: /etc/prometheus/prometheus.key
+      insecure_skip_verify: false
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        port: 9216
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_container_label_prometheus_job]
+        regex: mongo-stats
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: dock-schedule-proxy
+        action: keep
+      - source_labels: [__address__]
+        replacement: proxy:8083
+        target_label: __address__
+      - source_labels: [instance]
+        replacement: mongodb_scraper
+        target_label: instance
