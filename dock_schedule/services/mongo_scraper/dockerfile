@@ -1,0 +1,10 @@
+FROM bitnami/mongodb-exporter:latest
+
+USER root
+COPY docker-entrypoint.sh /custom-entrypoint.sh
+COPY mongodb_scraper.* /opt/bitnami/
+COPY dock-schedule-ca.crt /opt/bitnami/
+COPY web_config.yml /opt/bitnami/
+RUN cat /opt/bitnami/mongodb_scraper.crt /opt/bitnami/mongodb_scraper.key > /opt/bitnami/mongodb_scraper.pem
+RUN chmod +x /custom-entrypoint.sh
+ENTRYPOINT ["/custom-entrypoint.sh"]
