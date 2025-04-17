@@ -156,6 +156,28 @@ services:
       timeout: 5s
       retries: 3
 
+  mongodb_scraper:
+    image: mongodb_scraper:latest
+    build: /opt/dock-schedule/mongo_scraper
+    networks:
+      - dock-schedule-job-db
+      - dock-schedule-proxy
+    secrets:
+      - mongo_user
+      - mongo_passwd
+      - mongo_db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'bin/mongodb_exporter']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   scheduler:
     image: scheduler:latest
     build: /opt/dock-schedule/scheduler
