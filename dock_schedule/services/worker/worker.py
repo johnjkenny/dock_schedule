@@ -52,8 +52,8 @@ class Mongo():
                     self.__client = MongoClient(
                         host=self.__host,
                         tls=True,
-                        tlsCAFile='/app/dock-schedule-ca.crt',
-                        tlsCertificateKeyFile='/app/worker.pem',
+                        tlsCAFile='/app/ca.crt',
+                        tlsCertificateKeyFile='/app/host.pem',
                     )
                 except ConnectionFailure:
                     self.log.exception('Failed to connect to MongoDB')
@@ -180,8 +180,8 @@ class JobConsumer():
     def __create_connection_ssl_obj(self):
         try:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            context.load_verify_locations('/app/dock-schedule-ca.crt')
-            context.load_cert_chain('/app/worker.crt', '/app/worker.key')
+            context.load_verify_locations('/app/ca.crt')
+            context.load_cert_chain('/app/host.crt', '/app/host.key')
             context.verify_mode = ssl.CERT_REQUIRED
             context.check_hostname = True
             return SSLOptions(context, 'broker')

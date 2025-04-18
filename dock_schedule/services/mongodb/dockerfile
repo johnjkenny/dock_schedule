@@ -6,12 +6,9 @@ RUN groupdel mongodb
 RUN groupadd -g 3002 mongodb
 RUN useradd -u 3002 -g 3002 -s /bin/sh -d /data/db mongodb
 RUN mkdir /etc/mongo
-COPY mongodb.* /etc/mongo/
-COPY dock-schedule-ca.crt /etc/mongo/
 COPY init.js /docker-entrypoint-initdb.d/init.js
 COPY docker-entrypoint.sh /custom-entrypoint.sh
 COPY mongod.conf /etc/mongod.conf
-RUN cat /etc/mongo/mongodb.crt /etc/mongo/mongodb.key > /etc/mongo/mongodb.pem
-RUN chown -R mongodb:mongodb /docker-entrypoint-initdb.d/init.js /custom-entrypoint.sh /etc/mongo/ /etc/mongod.conf
+RUN chown -R mongodb:mongodb /docker-entrypoint-initdb.d/init.js /custom-entrypoint.sh /etc/mongod.conf /etc/mongo
 RUN chmod +x /custom-entrypoint.sh /docker-entrypoint-initdb.d/init.js /usr/local/bin/docker-entrypoint.py
 ENTRYPOINT ["/custom-entrypoint.sh"]

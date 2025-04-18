@@ -1,3 +1,0 @@
-tls_server_config:
-  cert_file: /opt/bitnami/mongodb_scraper.crt
-  key_file: /opt/bitnami/mongodb_scraper.key

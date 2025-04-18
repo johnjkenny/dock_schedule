@@ -2,14 +2,16 @@ services:
   proxy:
     image: proxy:latest
     build: /opt/dock-schedule/proxy
-    volumes:
-      - /opt/dock-schedule/proxy/nginx.conf:/etc/nginx/nginx.conf
     ports:
       - 80:80
       - 443:443
       - 8080:8080
     networks:
       - dock-schedule-proxy
+    secrets:
+      - ca_crt
+      - proxy_crt
+      - proxy_key
     deploy:
       replicas: 1
       restart_policy:
@@ -27,6 +29,10 @@ services:
     build: /opt/dock-schedule/proxy_scraper
     networks:
       - dock-schedule-proxy
+    secrets:
+      - ca_crt
+      - proxy_scraper_crt
+      - proxy_scraper_key
     deploy:
       replicas: 1
       restart_policy:
@@ -57,6 +63,10 @@ services:
       - '--web.config.file=/etc/prometheus/web_config.yml'
     networks:
       - dock-schedule-proxy
+    secrets:
+      - ca_crt
+      - node_scraper_crt
+      - node_scraper_key
     deploy:
       mode: global
       restart_policy:
@@ -75,12 +85,14 @@ services:
     image: broker:latest
     build: /opt/dock-schedule/broker
     volumes:
-      - /mnt/swarm-share/broker:/var/lib/rabbitmq
-      - /opt/dock-schedule/broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - /opt/dock-schedule/broker/data:/var/lib/rabbitmq
     secrets:
       - broker_user
       - broker_passwd
       - broker_vhost
+      - ca_crt
+      - broker_crt
+      - broker_key
     networks:
       - dock-schedule-proxy
       - dock-schedule-broker
@@ -107,10 +119,13 @@ services:
       - '--web.config.file=/etc/prometheus/web_config.yml'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /mnt/swarm-share/prometheus:/prometheus
-      - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /opt/dock-schedule/prometheus/data:/prometheus
     networks:
       - dock-schedule-proxy
+    secrets:
+      - ca_crt
+      - prometheus_crt
+      - prometheus_key
     deploy:
       placement:
         constraints:
@@ -132,10 +147,13 @@ services:
       - GF_LIVE_ENABLED=false
     build: /opt/dock-schedule/grafana
     volumes:
-      - /mnt/swarm-share/grafana:/var/lib/grafana
-      - /opt/dock-schedule/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - /opt/dock-schedule/grafana/data:/var/lib/grafana
     networks:
       - dock-schedule-proxy
+    secrets:
+      - ca_crt
+      - grafana_crt
+      - grafana_key
     deploy:
       replicas: 1
       restart_policy:
@@ -150,9 +168,9 @@ services:
 
   mongodb:
     image: mongodb:latest
-    build: /opt/dock-schedule/mongo
+    build: /opt/dock-schedule/mongodb
     volumes:
-      - /mnt/swarm-share/mongo:/data/db
+      - /opt/dock-schedule/mongodb/data:/data/db
     networks:
       - dock-schedule-job-db
       - dock-schedule-proxy
@@ -160,6 +178,9 @@ services:
       - mongo_user
       - mongo_passwd
       - mongo_db
+      - ca_crt
+      - mongodb_crt
+      - mongodb_key
     deploy:
       replicas: 1
       restart_policy:
@@ -182,6 +203,9 @@ services:
       - mongo_user
       - mongo_passwd
       - mongo_db
+      - ca_crt
+      - mongodb_scraper_crt
+      - mongodb_scraper_key
     deploy:
       replicas: 1
       restart_policy:
@@ -200,8 +224,7 @@ services:
     image: scheduler:latest
     build: /opt/dock-schedule/scheduler
     volumes:
-      - /opt/dock-schedule/scheduler/scheduler.py:/app/scheduler.py
-      - /mnt/swarm-share/jobs/crons.json:/app/crons.json
+      - /opt/dock-schedule/jobs/crons.json:/app/crons.json
     networks:
       - dock-schedule-broker
       - dock-schedule-job-db
@@ -212,6 +235,9 @@ services:
       - mongo_user
       - mongo_passwd
       - mongo_db
+      - ca_crt
+      - scheduler_crt
+      - scheduler_key
     deploy:
       replicas: 1
       restart_policy:
@@ -228,9 +254,8 @@ services:
     image: worker:latest
     build: /opt/dock-schedule/worker
     volumes:
-      - /opt/dock-schedule/worker/worker.py:/app/worker.py
-      - /mnt/swarm-share/ansible:/app/ansible
-      - /mnt/swarm-share/jobs:/app/jobs
+      - /opt/dock-schedule/ansible:/app/ansible
+      - /opt/dock-schedule/jobs:/app/jobs
     networks:
       - dock-schedule-broker
       - dock-schedule-job-db
@@ -241,6 +266,9 @@ services:
       - mongo_user
       - mongo_passwd
       - mongo_db
+      - ca_crt
+      - worker_crt
+      - worker_key
     deploy:
       replicas: 1
       restart_policy:
@@ -280,3 +308,45 @@ secrets:
     external: true
   mongo_db:
     external: true
+  ca_crt:
+    file: /opt/dock-schedule/certs/dock-schedule-ca.crt
+  broker_crt:
+    file: /opt/dock-schedule/certs/broker.crt
+  broker_key:
+    file: /opt/dock-schedule/certs/broker.key
+  grafana_crt:
+    file: /opt/dock-schedule/certs/grafana.crt
+  grafana_key:
+    file: /opt/dock-schedule/certs/grafana.key
+  mongodb_crt:
+    file: /opt/dock-schedule/certs/mongodb.crt
+  mongodb_key:
+    file: /opt/dock-schedule/certs/mongodb.key
+  mongodb_scraper_crt:
+    file: /opt/dock-schedule/certs/mongodb_scraper.crt
+  mongodb_scraper_key:
+    file: /opt/dock-schedule/certs/mongodb_scraper.key
+  node_scraper_crt:
+    file: /opt/dock-schedule/certs/node_scraper.crt
+  node_scraper_key:
+    file: /opt/dock-schedule/certs/node_scraper.key
+  prometheus_crt:
+    file: /opt/dock-schedule/certs/prometheus.crt
+  prometheus_key:
+    file: /opt/dock-schedule/certs/prometheus.key
+  proxy_crt:
+    file: /opt/dock-schedule/certs/proxy.crt
+  proxy_key:
+    file: /opt/dock-schedule/certs/proxy.key
+  proxy_scraper_crt:
+    file: /opt/dock-schedule/certs/proxy_scraper.crt
+  proxy_scraper_key:
+    file: /opt/dock-schedule/certs/proxy_scraper.key
+  scheduler_crt:
+    file: /opt/dock-schedule/certs/scheduler.crt
+  scheduler_key:
+    file: /opt/dock-schedule/certs/scheduler.key
+  worker_crt: 
+    file: /opt/dock-schedule/certs/worker.crt
+  worker_key:
+    file: /opt/dock-schedule/certs/worker.key
