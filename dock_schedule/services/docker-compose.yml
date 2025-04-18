@@ -55,12 +55,6 @@ services:
       - /sys:/host/sys:ro
       - /run/udev/data:/run/udev/data
       - /:/rootfs:ro
-    command:
-      - '--path.rootfs=/rootfs'
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--web.config.file=/etc/prometheus/web_config.yml'
     networks:
       - dock-schedule-proxy
     secrets:
@@ -114,9 +108,6 @@ services:
     image: prometheus:latest
     build: /opt/dock-schedule/prometheus
     user: root
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--web.config.file=/etc/prometheus/web_config.yml'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /opt/dock-schedule/prometheus/data:/prometheus
