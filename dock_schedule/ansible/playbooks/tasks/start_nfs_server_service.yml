@@ -11,7 +11,7 @@
 - name: Create Swarm-Share NFS Export
   ansible.builtin.lineinfile:
     path: /etc/exports
-    line: "/mnt/swarm-share {{ export_subnet }}(rw,sync,no_subtree_check,no_root_squash)"
+    line: "/opt/dock-schedule {{ export_subnet }}(rw,sync,no_subtree_check,no_root_squash)"
     state: present
     create: true
     insertafter: EOF

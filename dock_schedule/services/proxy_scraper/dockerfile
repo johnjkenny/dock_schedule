@@ -2,9 +2,6 @@ FROM bitnami/nginx-exporter:latest
 
 USER root
 COPY docker-entrypoint.sh /custom-entrypoint.sh
-COPY proxy_scraper.* /opt/bitnami/
-COPY dock-schedule-ca.crt /opt/bitnami/
 COPY web_config.yml /opt/bitnami/
-RUN cat /opt/bitnami/proxy_scraper.crt /opt/bitnami/proxy_scraper.key > /opt/bitnami/proxy_scraper.pem
 RUN chmod +x /custom-entrypoint.sh
 ENTRYPOINT ["/custom-entrypoint.sh"]

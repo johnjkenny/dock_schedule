@@ -1,8 +1,10 @@
 from pathlib import Path
 from shutil import copytree, ignore_patterns
+from string import ascii_letters
 from subprocess import run
 from tempfile import TemporaryDirectory
 from json import dump
+from random import choices
 
 import ansible_runner
 
@@ -45,9 +47,10 @@ class Init():
 
     def create_swarm_dir_tree(self):
         self.log.info('Creating swarm directory tree')
-        for path in ['ansible/playbooks', 'broker', 'grafana', 'jobs', 'mongo', 'prometheus', 'proxy']:
+        for path in ['ansible/playbooks', 'broker/data', 'grafana/data', 'jobs', 'mongodb/data', 'prometheus/data',
+                     'certs']:
             try:
-                Path('/mnt/swarm-share/' + path).mkdir(parents=True, exist_ok=True)
+                Path('/opt/dock-schedule/' + path).mkdir(parents=True, exist_ok=True)
             except Exception:
                 self.log.exception(f'Failed to create directory {path}')
                 return False
@@ -56,7 +59,7 @@ class Init():
     def __create_ansible_files(self):
         try:
             src = Path(__file__).parent / 'ansible/'
-            copytree(src, '/mnt/swarm-share/ansible/', dirs_exist_ok=True, ignore=ignore_patterns('__init__.py'))
+            copytree(src, '/opt/dock-schedule/ansible/', dirs_exist_ok=True, ignore=ignore_patterns('__init__.py'))
         except Exception:
             self.log.exception('Failed to copy ansible files')
             return False
@@ -65,7 +68,7 @@ class Init():
     def __create_job_files(self):
         try:
             src = Path(__file__).parent / 'jobs/'
-            copytree(src, '/mnt/swarm-share/jobs/', dirs_exist_ok=True, ignore=ignore_patterns('__init__.py'))
+            copytree(src, '/opt/dock-schedule/jobs/', dirs_exist_ok=True, ignore=ignore_patterns('__init__.py'))
         except Exception:
             self.log.exception('Failed to copy ansible files')
             return False
@@ -73,17 +76,16 @@ class Init():
 
     def __set_share_dir_permissions(self):
         for permission in [('rabbitmq', 'broker'), ('grafana', 'grafana'), ('mongodb', 'mongodb')]:
-            if not self._run_cmd(f'chown -R {permission[0]}:root /mnt/swarm-share/{permission[1]}')[1]:
+            if not self._run_cmd(f'chown -R {permission[0]}:root /opt/dock-schedule/{permission[1]}/data')[1]:
                 self.log.error(f'Failed to set permissions for {permission}')
                 return False
-        return True
+        return self.__copy_swarm_services()
 
-    def create_dock_schedule_dir_tree(self):
+    def __copy_swarm_services(self):
         self.log.info('Creating dock-schedule directory tree')
         try:
             src = Path(__file__).parent / 'services/'
             copytree(src, '/opt/dock-schedule/', dirs_exist_ok=True, ignore=ignore_patterns('__init__.py'))
-            Path('/opt/dock-schedule/certs').mkdir(exist_ok=True)
             return True
         except Exception:
             self.log.exception('Failed to copy dock-schedule files')
@@ -95,6 +97,17 @@ class Init():
             return self.certs._initialize_cert_authority(self.__force) and self.__generate_container_ssl_certs()
         return False
 
+    def __fill_subject_randoms(self, subject: dict) -> dict:
+        for key, value in subject.items():
+            if value == 'Random':
+                if key == 'country':
+                    subject[key] = ''.join(choices(ascii_letters, k=2))
+                elif key == 'email':
+                    subject[key] = ''.join(choices(ascii_letters, k=choices(range(10, 20)))) + '@example.com'
+                else:
+                    subject[key] = ''.join(choices(ascii_letters, k=choices(range(10, 20))))
+        return subject
+
     def __create_cert_subject(self) -> bool:
         """Create the CA subject file if it does not exist or force is set
 
@@ -105,12 +118,13 @@ class Init():
         if file.exists() and not self.__force:
             return True
         subject = {}
-        subject['country'] = input('CA Country Name (2 letter code) [US]: ') or 'US'
-        subject['state'] = input('CA State or Province Name [US-STATE]: ') or 'US-State'
-        subject['city'] = input('CA Locality Name (city) [US-CITY]: ') or 'US-City'
-        subject['company'] = input('CA Organization Name (eg, company) [US-Company]: ') or 'US-Company'
-        subject['department'] = input('CA Organizational Unit Name (eg, section) [US-Department]: ') or 'US-Department'
-        subject['email'] = input('CA email [myEmail@email.com]: ') or 'myEmail@email.com'
+        subject['country'] = input('CA Country Name (2 letter code) [Random]: ') or 'Random'
+        subject['state'] = input('CA State or Province Name [Random]: ') or 'Random'
+        subject['city'] = input('CA Locality Name (city) [Random]: ') or 'Random'
+        subject['company'] = input('CA Organization Name (eg, company) [Random]: ') or 'Random'
+        subject['department'] = input('CA Organizational Unit Name (eg, section) [Random]: ') or 'Random'
+        subject['email'] = input('CA email [Random]: ') or 'Random'
+        subject = self.__fill_subject_randoms(subject)
         try:
             with open(file, 'w') as file:
                 dump(subject, file, indent=2)
@@ -121,9 +135,8 @@ class Init():
         return False
 
     def __generate_container_ssl_certs(self):
-        # for service in ['broker', 'grafana', 'mongodb', 'mongodb_scraper', 'prometheus', 'scheduler', 'node_scraper',
-        # 'worker', 'proxy', 'proxy_scraper']:
-        for service in ['node_scraper']:
+        for service in ['broker', 'grafana', 'mongodb', 'mongodb_scraper', 'prometheus', 'scheduler', 'node_scraper',
+                        'worker', 'proxy', 'proxy_scraper']:
             if not self.certs.create(service, [service, 'localhost', '127.0.0.1']):
                 self.log.error(f'Failed to create certificate for {service}')
                 return False
@@ -159,9 +172,9 @@ class Init():
         with TemporaryDirectory(dir='/tmp', delete=True) as temp_dir:
             result = ansible_runner.run(
                 private_data_dir=temp_dir,
-                playbook='/mnt/swarm-share/ansible/playbooks/create_swarm.yml',
+                playbook='/opt/dock-schedule/ansible/playbooks/create_swarm.yml',
                 inventory={'all': {'hosts': {'localhost': {'ansible_connection': 'local'}}}},
-                envvars={'ANSIBLE_CONFIG': '/mnt/swarm-share/ansible/ansible.cfg',
+                envvars={'ANSIBLE_CONFIG': '/opt/dock-schedule/ansible/ansible.cfg',
                          'ANSIBLE_PYTHON_INTERPRETER': '/usr/bin/python3'})
             if result.rc != 0:
                 self.log.error(f'Failed to run ansible playbook: {result.status}')
@@ -170,12 +183,8 @@ class Init():
             return True
 
     def _run(self):
-        for method in [
-            # self.__create_service_users, self.create_swarm_dir_tree, self.create_dock_schedule_dir_tree,
-            # self.init_cert_store,
-            self.__generate_container_ssl_certs,
-            # self.create_docker_swarm
-            ]:
+        for method in [self.__create_service_users, self.create_swarm_dir_tree, self.init_cert_store,
+                       self.create_docker_swarm]:
             if not method():
                 return False
         self.log.info('Successfully initialized dock-schedule')

@@ -3,9 +3,7 @@ FROM python:3.13-slim
 WORKDIR /app
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY requirements.txt /app/requirements.txt
-COPY scheduler.* /app/
-COPY dock-schedule-ca.crt /app/
-RUN cat /app/scheduler.crt /app/scheduler.key > /app/scheduler.pem
+COPY scheduler.py /app/
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
 RUN chmod +x /app/docker-entrypoint.sh /app/scheduler.py
 RUN apt update && apt install -y procps

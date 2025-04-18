@@ -8,9 +8,9 @@ scrape_configs:
     params:
       ip: [$1]
     tls_config:
-      ca_file: /etc/prometheus/dock-schedule-ca.crt
-      cert_file: /etc/prometheus/prometheus.crt
-      key_file: /etc/prometheus/prometheus.key
+      ca_file: /etc/prometheus/ca.crt
+      cert_file: /etc/prometheus/host.crt
+      key_file: /etc/prometheus/host.key
       insecure_skip_verify: false
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock
@@ -40,9 +40,9 @@ scrape_configs:
     params:
       host: [broker]
     tls_config:
-      ca_file: /etc/prometheus/dock-schedule-ca.crt
-      cert_file: /etc/prometheus/prometheus.crt
-      key_file: /etc/prometheus/prometheus.key
+      ca_file: /etc/prometheus/ca.crt
+      cert_file: /etc/prometheus/host.crt
+      key_file: /etc/prometheus/host.key
       insecure_skip_verify: false
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock
@@ -70,9 +70,9 @@ scrape_configs:
     params:
       host: [mongodb_scraper]
     tls_config:
-      ca_file: /etc/prometheus/dock-schedule-ca.crt
-      cert_file: /etc/prometheus/prometheus.crt
-      key_file: /etc/prometheus/prometheus.key
+      ca_file: /etc/prometheus/ca.crt
+      cert_file: /etc/prometheus/host.crt
+      key_file: /etc/prometheus/host.key
       insecure_skip_verify: false
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock
@@ -100,9 +100,9 @@ scrape_configs:
     params:
       host: [proxy_scraper]
     tls_config:
-      ca_file: /etc/prometheus/dock-schedule-ca.crt
-      cert_file: /etc/prometheus/prometheus.crt
-      key_file: /etc/prometheus/prometheus.key
+      ca_file: /etc/prometheus/ca.crt
+      cert_file: /etc/prometheus/host.crt
+      key_file: /etc/prometheus/host.key
       insecure_skip_verify: false
     dockerswarm_sd_configs:
       - host: unix:///var/run/docker.sock

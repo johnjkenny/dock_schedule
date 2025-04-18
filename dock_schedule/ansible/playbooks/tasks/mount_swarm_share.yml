@@ -1,15 +1,15 @@
 - name: Create swarm share directory
   ansible.builtin.file:
-    path: /mnt/swarm-share
+    path: /opt/dock-schedule
     state: directory
-    mode: '0750'
+    mode: 0750
     owner: root
     group: root
 
 - name: Mount swarm NFS share
   ansible.posix.mount:
-    path: /mnt/swarm-share
-    src: "{{ nfs_server }}:/mnt/swarm-share"
+    path: /opt/dock-schedule
+    src: "{{ nfs_server }}:/opt/dock-schedule"
     fstype: nfs
     opts: defaults
     state: mounted
