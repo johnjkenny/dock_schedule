@@ -501,7 +501,7 @@ class JobScheduler():
         self.__publisher = JobPublisher(self.log)
         self.__db = Mongo(self.log)
         self._crons = schedule
-        if not self.__publisher.start():
+        if not self.__publisher.start() and not self.__retry_publisher_connect():
             raise Exception('Failed to start job publisher')
 
     def __enter__(self):
@@ -509,6 +509,17 @@ class JobScheduler():
 
     def __exit__(self, *_):
         self.__publisher.stop()
+
+    def __retry_publisher_connect(self):
+        attempt = 1
+        sleep(3)
+        while attempt < 6:
+            self.log.error(f'Failed to connect to broker, retrying {attempt}/5')
+            if self.__publisher.start():
+                return True
+            attempt += 1
+            sleep(5)
+        return False
 
     def __create_cron_job(self, cron: Dict):
         freq = cron.get('frequency')

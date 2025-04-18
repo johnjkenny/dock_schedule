@@ -398,7 +398,7 @@ class Worker():
         self.stop_trigger = Event()
         self.__consumer = JobConsumer(self.__job_request_handler, self.log)
         self.__db = Mongo(self.log)
-        if not self.__consumer.start():
+        if not self.__consumer.start() and not self.__retry_consumer_connect():
             raise Exception('Failed to start job consumer')
 
     def __enter__(self):
@@ -406,6 +406,17 @@ class Worker():
 
     def __exit__(self, *_):
         self.__consumer.stop()
+
+    def __retry_consumer_connect(self):
+        attempt = 1
+        sleep(3)
+        while attempt < 6:
+            self.log.error(f'Failed to connect to broker, retrying {attempt}/5')
+            if self.__consumer.start():
+                return True
+            attempt += 1
+            sleep(5)
+        return False
 
     def __convert_job_request(self, job_request: bytes):
         try:

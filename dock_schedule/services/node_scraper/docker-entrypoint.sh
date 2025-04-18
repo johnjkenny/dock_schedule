@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 cat /run/secrets/ca_crt > /etc/prometheus/ca.crt
 cat /run/secrets/node_scraper_crt > /etc/prometheus/host.crt
