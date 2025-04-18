@@ -186,7 +186,7 @@ services:
 
   mongodb_scraper:
     image: mongodb_scraper:latest
-    build: /opt/dock-schedule/mongo_scraper
+    build: /opt/dock-schedule/mongodb_scraper
     networks:
       - dock-schedule-job-db
       - dock-schedule-proxy

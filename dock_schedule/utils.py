@@ -4,7 +4,7 @@ from string import ascii_letters
 from subprocess import run
 from tempfile import TemporaryDirectory
 from json import dump
-from random import choices
+from random import choices, choice
 
 import ansible_runner
 
@@ -103,9 +103,9 @@ class Init():
                 if key == 'country':
                     subject[key] = ''.join(choices(ascii_letters, k=2))
                 elif key == 'email':
-                    subject[key] = ''.join(choices(ascii_letters, k=choices(range(10, 20)))) + '@example.com'
+                    subject[key] = ''.join(choices(ascii_letters, k=choice(range(10, 20)))) + '@random.com'
                 else:
-                    subject[key] = ''.join(choices(ascii_letters, k=choices(range(10, 20))))
+                    subject[key] = ''.join(choices(ascii_letters, k=choice(range(10, 20))))
         return subject
 
     def __create_cert_subject(self) -> bool:
