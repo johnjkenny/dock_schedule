@@ -143,15 +143,13 @@ class JobConsumer():
         return False
 
     def __wait_for_bind_set(self):
-        cnt = 0
-        while cnt < 50:
-            if self.__bind_set:
-                self.log.info('Successfully set queue')
-                return True
+        while not self.__bind_set:
+            if self.__connect_attempt == self.__max_connect_attempts:
+                self.log.error('Failed to set queue bind')
+                return False
             sleep(.2)
-            cnt += 1
-        self.log.error('Failed to set queue bind')
-        return False
+        self.log.info('Successfully set queue')
+        return True
 
     def __wait_for_conn_unblock(self, timeout: int = 180):
         self.__conn_blocked = True
@@ -398,7 +396,7 @@ class Worker():
         self.stop_trigger = Event()
         self.__consumer = JobConsumer(self.__job_request_handler, self.log)
         self.__db = Mongo(self.log)
-        if not self.__consumer.start() and not self.__retry_consumer_connect():
+        if not self.__consumer.start():
             raise Exception('Failed to start job consumer')
 
     def __enter__(self):
@@ -406,17 +404,6 @@ class Worker():
 
     def __exit__(self, *_):
         self.__consumer.stop()
-
-    def __retry_consumer_connect(self):
-        attempt = 1
-        sleep(3)
-        while attempt < 6:
-            self.log.error(f'Failed to connect to broker, retrying {attempt}/5')
-            if self.__consumer.start():
-                return True
-            attempt += 1
-            sleep(5)
-        return False
 
     def __convert_job_request(self, job_request: bytes):
         try:
