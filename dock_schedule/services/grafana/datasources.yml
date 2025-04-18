@@ -7,6 +7,7 @@ datasources:
     basicAuth: false
     withCredentials: false
     orgId: 1
+    uid: prometheus
     url: https://proxy:8080
     isDefault: true
     editable: true
