@@ -3,8 +3,12 @@ FROM grafana/grafana:latest
 USER root
 RUN deluser grafana
 RUN adduser --uid 3000 --disabled-password --home /usr/share/grafana grafana
+RUN mkdir -p /etc/grafana/dashboards
 COPY grafana.ini /etc/grafana/
 COPY docker-entrypoint.sh /custom-entrypoint.sh
 COPY datasources.yml /etc/grafana/provisioning/datasources/datasources.yml
+COPY dashboard.yml /etc/grafana/provisioning/dashboards/dashboard.yml
+# COPY copy json dashboards to /etc/grafana/dashboards
+RUN chown -R grafana:root /etc/grafana/provisioning /etc/grafana/dashboards
 RUN chmod +x /custom-entrypoint.sh
 ENTRYPOINT ["/custom-entrypoint.sh"]
