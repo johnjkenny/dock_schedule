@@ -138,6 +138,7 @@ services:
       - GF_LIVE_ENABLED=false
     build: /opt/dock-schedule/grafana
     volumes:
+      - /opt/dock-schedule/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
       - /opt/dock-schedule/grafana/data:/var/lib/grafana
     networks:
       - dock-schedule-proxy
