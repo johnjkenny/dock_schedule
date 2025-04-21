@@ -43,3 +43,6 @@
 
     - name: Join Swarm
       ansible.builtin.import_tasks: tasks/join_swarm.yml
+
+    - name: Rebalance Swarm Services
+      ansible.builtin.import_tasks: tasks/rebalance_swarm_services.yml

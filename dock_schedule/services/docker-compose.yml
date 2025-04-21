@@ -233,6 +233,9 @@ services:
       - scheduler_crt
       - scheduler_key
     deploy:
+      placement:
+        constraints:
+          - node.role == manager
       replicas: 1
       restart_policy:
         condition: on-failure
@@ -264,7 +267,7 @@ services:
       - worker_crt
       - worker_key
     deploy:
-      replicas: 1
+      replicas: 3
       restart_policy:
         condition: on-failure
         delay: 5s
