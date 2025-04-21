@@ -9,6 +9,8 @@ def parse_parent_args(args: dict):
         return init(args['init'])
     if args.get('addNode'):
         return add_node(args['addNode'])
+    if args.get('removeNode'):
+        return remove_node(args['removeNode'])
     return True
 
 
@@ -25,7 +27,7 @@ def parent():
             'nargs': REMAINDER
         },
         'removeNode': {
-            'short': 'r',
+            'short': 'R',
             'help': 'Remove a node from the dock-schedule swarm',
             'nargs': REMAINDER
         },
@@ -70,12 +72,38 @@ def add_node(parent_args: list = None):
         'name': {
             'short': 'n',
             'help': 'Name of the node',
+            'required': True
         },
         'ip': {
             'short': 'i',
             'help': 'IP address of the node',
+            'required': True
         },
     }).set_arguments()
     if not parse_add_node_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_remove_node_args(args: dict):
+    if args.get('name') and args.get('ip'):
+        return Utils().remove_docker_swarm_node(args['name'], args['ip'])
+    return True
+
+
+def remove_node(parent_args: list = None):
+    args = ArgParser('Dock Schedule Remove Node', parent_args, {
+        'name': {
+            'short': 'n',
+            'help': 'Name of the node',
+            'required': True
+        },
+        'ip': {
+            'short': 'i',
+            'help': 'IP address of the node',
+            'required': True
+        },
+    }).set_arguments()
+    if not parse_remove_node_args(args):
         exit(1)
     exit(0)
