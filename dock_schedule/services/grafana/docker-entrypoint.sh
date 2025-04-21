@@ -14,4 +14,4 @@ sed -i "s|CLIENT_CERT|$CERT_CONTENT|g" /etc/grafana/provisioning/datasources/dat
 sed -i "s|CLIENT_KEY|$KEY_CONTENT|g" /etc/grafana/provisioning/datasources/datasources.yml
 sed -i 's|@@@|\'$'\n        |g' /etc/grafana/provisioning/datasources/datasources.yml
 
-exec /run.sh
+exec su -s /bin/bash -c "/run.sh" grafana
