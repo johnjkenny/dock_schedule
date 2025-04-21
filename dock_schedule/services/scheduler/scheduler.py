@@ -636,7 +636,52 @@ jobs are listed by type:
         "script_name": "test.py",
         "script_args": ["0"],
         "frequency": "second",
-        "interval": 30,
+        "interval": 1,
+        "active": true
+    },
+    {
+        "name": "Test Job Successful",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["0"],
+        "frequency": "second",
+        "interval": 1,
+        "active": true
+    },
+    {
+        "name": "Test Job Successful",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["0"],
+        "frequency": "second",
+        "interval": 1,
+        "active": true
+    },
+    {
+        "name": "Test Job Successful",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["0"],
+        "frequency": "second",
+        "interval": 1,
+        "active": true
+    },
+    {
+        "name": "Test Job Successful",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["0"],
+        "frequency": "second",
+        "interval": 1,
+        "active": true
+    },
+    {
+        "name": "Test Job Successful",
+        "script_type": "python3",
+        "script_name": "test.py",
+        "script_args": ["0"],
+        "frequency": "second",
+        "interval": 1,
         "active": true
     },
     {
@@ -649,6 +694,5 @@ jobs are listed by type:
         "active": true
     }
 ]
-
 
 '''
