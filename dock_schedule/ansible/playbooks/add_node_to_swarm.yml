@@ -1,13 +1,19 @@
 ---
 - name: Add Node to Swarm
   hosts: all
-  gather_facts: false
+  gather_facts: true
   become: true
   vars:
     nfs_server: ''
-    manager_ip: ""
-    token: ""
+    manager_ip: ''
+    worker_token: ''
   tasks:
+    - name: Get Swarm Manager IP
+      ansible.builtin.import_tasks: tasks/get_swarm_manager_ip.yml
+
+    - name: Get Swarm Join Token
+      ansible.builtin.import_tasks: tasks/get_swarm_join_token.yml
+
     - name: Create Grafana User
       ansible.builtin.import_tasks: tasks/create_grafana_user.yml
 
@@ -17,17 +23,20 @@
     - name: Create MongoDB User
       ansible.builtin.import_tasks: tasks/create_mongodb_user.yml
 
+    - name: Add Swarm Firewall Rules
+      ansible.builtin.import_tasks: tasks/add_swarm_firewall_rules.yml
+
+    - name: Install NFS
+      ansible.builtin.import_tasks: tasks/install_nfs.yml
+
+    - name: Start NFS Client Service
+      ansible.builtin.import_tasks: tasks/start_nfs_client_service.yml
+
     - name: Mount Swarm NFS Share
       ansible.builtin.import_tasks: tasks/mount_swarm_share.yml
 
     - name: Install Docker
       ansible.builtin.import_tasks: tasks/install_docker.yml
-
-    - name: Add Swarm Firewall Rules
-      ansible.builtin.import_tasks: tasks/add_swarm_firewall_rules.yml
-
-    - name: Sync Dock-Schedule Files
-      ansible.builtin.import_tasks: tasks/sync_dock_schedule_services.yml
 
     - name: Build Docker Swarm Services
       ansible.builtin.import_tasks: tasks/build_containers.yml

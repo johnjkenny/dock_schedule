@@ -1,4 +1,13 @@
 - name: Get join-token
   ansible.builtin.command: docker swarm join-token -q worker
-  register: worker_token
+  register: swarm_worker_token
   changed_when: true
+  delegate_to: localhost
+  run_once: true
+
+- name: Set Swarm worker token fact
+  ansible.builtin.set_fact:
+    worker_token: "{{ swarm_worker_token.stdout }}"
+  delegate_to: localhost
+  changed_when: false
+  run_once: true

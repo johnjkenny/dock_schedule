@@ -1,0 +1,14 @@
+- name: Get Docker Swarm manager IP
+  ansible.builtin.command: docker info --format '{{ "{{ .Swarm.NodeAddr }}" }}'
+  register: swarm_manager_ip
+  delegate_to: localhost
+  changed_when: false
+  run_once: true
+
+- name: Set fact for Swarm manager IP
+  ansible.builtin.set_fact:
+    manager_ip: "{{ swarm_manager_ip.stdout }}"
+    nfs_server: "{{ swarm_manager_ip.stdout }}"
+  delegate_to: localhost
+  changed_when: false
+  run_once: true
