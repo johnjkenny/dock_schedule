@@ -1,5 +1,3 @@
 - name: Join the Swarm
   ansible.builtin.shell: |
-    docker swarm join --token {{ token }} {{ manager_ip }}:2377
-  args:
-    creates: /var/lib/docker/swarm
+    docker swarm join --token {{ worker_token }} {{ manager_ip }}:2377

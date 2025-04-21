@@ -5,6 +5,7 @@ from subprocess import run
 from tempfile import TemporaryDirectory
 from json import dump
 from random import choices, choice
+from logging import Logger
 
 import ansible_runner
 
@@ -12,9 +13,79 @@ from dock_schedule.logger import get_logger
 from dock_schedule.cert_auth import CertStore
 
 
-class Init():
-    def __init__(self, force: bool = False):
-        self.log = get_logger('dock-schedule')
+class Utils():
+    def __init__(self, logger: Logger = None):
+        self.log = logger or get_logger('dock-schedule')
+
+    @property
+    def ansible_env_vars(self):
+        return {
+            'ANSIBLE_CONFIG': '/opt/dock-schedule/ansible/ansible.cfg',
+            'ANSIBLE_PYTHON_INTERPRETER': '/usr/bin/python3',
+            'ANSIBLE_PRIVATE_KEY_FILE': '/opt/dock-schedule/.env/.ansible_rsa',
+        }
+
+    @property
+    def localhost_inventory(self):
+        return {'all': {'hosts': {'localhost': {'ansible_connection': 'local'}}}}
+
+    def __remote_inventory(self, host: str, ip: str) -> dict:
+        return {'all': {'hosts': {host: {'ansible_host': ip}}}}
+
+    def _run_cmd(self, cmd: str, ignore_error: bool = False, log_output: bool = False) -> tuple:
+        """Run a command and return the output
+
+        Args:
+            cmd (str): Command to run
+            ignore_error (bool, optional): ignore errors. Defaults to False
+            log_output (bool, optional): Log command output. Defaults to False.
+
+        Returns:
+            tuple: (stdout, True. '') on success or (stdout, False, error) on failure
+        """
+        state = True
+        error = ''
+        output = run(cmd, shell=True, capture_output=True, text=True)
+        if output.returncode != 0:
+            state = False
+            error = output.stderr
+            if not ignore_error:
+                self.log.error(f'Command: {cmd}\nExit Code: {output.returncode}\nError: {error}')
+                return '', state, error
+        stdout = output.stdout
+        if log_output:
+            self.log.info(f'Command: {cmd}\nOutput: {stdout}')
+        return stdout, state, error
+
+    def create_docker_swarm(self):
+        self.log.info('Creating docker swarm')
+        return self.run_ansible_playbook('create_swarm.yml', self.localhost_inventory)
+
+    def add_docker_swarm_node(self, host: str, ip: str):
+        self.log.info('Adding docker swarm node')
+        return self.run_ansible_playbook('add_node_to_swarm.yml', self.__remote_inventory(host, ip))
+
+    def remove_docker_swarm_node(self, host: str, ip: str):
+        self.log.info('Removing docker swarm node')
+        # Update to drain the node before removing it
+        return self.run_ansible_playbook('remove_node_from_swarm.yml', self.__remote_inventory(host, ip))
+
+    def run_ansible_playbook(self, playbook: str, inventory: dict):
+        with TemporaryDirectory(dir='/tmp', delete=True) as temp_dir:
+            result = ansible_runner.run(
+                private_data_dir=temp_dir,
+                playbook=f'/opt/dock-schedule/ansible/playbooks/{playbook}',
+                inventory=inventory,
+                envvars=self.ansible_env_vars)
+            if result.rc != 0:
+                self.log.error(f'Failed to run ansible playbook: {result.status}')
+                return False
+            return True
+
+
+class Init(Utils):
+    def __init__(self, force: bool = False, logger: Logger = None):
+        super().__init__(logger)
         self.__force = force
 
     @property
@@ -141,46 +212,6 @@ class Init():
                 self.log.error(f'Failed to create certificate for {service}')
                 return False
         return True
-
-    def _run_cmd(self, cmd: str, ignore_error: bool = False, log_output: bool = False) -> tuple:
-        """Run a command and return the output
-
-        Args:
-            cmd (str): Command to run
-            ignore_error (bool, optional): ignore errors. Defaults to False
-            log_output (bool, optional): Log command output. Defaults to False.
-
-        Returns:
-            tuple: (stdout, True. '') on success or (stdout, False, error) on failure
-        """
-        state = True
-        error = ''
-        output = run(cmd, shell=True, capture_output=True, text=True)
-        if output.returncode != 0:
-            state = False
-            error = output.stderr
-            if not ignore_error:
-                self.log.error(f'Command: {cmd}\nExit Code: {output.returncode}\nError: {error}')
-                return '', state, error
-        stdout = output.stdout
-        if log_output:
-            self.log.info(f'Command: {cmd}\nOutput: {stdout}')
-        return stdout, state, error
-
-    def create_docker_swarm(self):
-        self.log.info('Creating docker swarm')
-        with TemporaryDirectory(dir='/tmp', delete=True) as temp_dir:
-            result = ansible_runner.run(
-                private_data_dir=temp_dir,
-                playbook='/opt/dock-schedule/ansible/playbooks/create_swarm.yml',
-                inventory={'all': {'hosts': {'localhost': {'ansible_connection': 'local'}}}},
-                envvars={'ANSIBLE_CONFIG': '/opt/dock-schedule/ansible/ansible.cfg',
-                         'ANSIBLE_PYTHON_INTERPRETER': '/usr/bin/python3'})
-            if result.rc != 0:
-                self.log.error(f'Failed to run ansible playbook: {result.status}')
-                return False
-            self.log.info('Successfully created docker swarm')
-            return True
 
     def _run(self):
         for method in [self.__create_service_users, self.create_swarm_dir_tree, self.init_cert_store,

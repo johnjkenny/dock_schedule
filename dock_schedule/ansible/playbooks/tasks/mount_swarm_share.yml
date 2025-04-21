@@ -2,7 +2,7 @@
   ansible.builtin.file:
     path: /opt/dock-schedule
     state: directory
-    mode: 0750
+    mode: '0750'
     owner: root
     group: root
 
