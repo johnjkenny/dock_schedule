@@ -1,0 +1,4 @@
+- name: Remove node from swarm
+  ansible.builtin.command: "docker node rm {{ inventory_hostname }} --force"
+  delegate_to: localhost
+  changed_when: true

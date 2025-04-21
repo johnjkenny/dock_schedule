@@ -1,0 +1,14 @@
+---
+- name: Remove Node from Swarm
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Drain removal node
+      ansible.builtin.import_tasks: tasks/drain_swarm_node.yml
+
+    - name: Leave Swarm
+      ansible.builtin.import_tasks: tasks/leave_swarm.yml
+
+    - name: Cleanup swarm node on manager
+      ansible.builtin.import_tasks: tasks/node_removal_cleanup.yml

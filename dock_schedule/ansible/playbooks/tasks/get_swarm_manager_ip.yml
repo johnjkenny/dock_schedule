@@ -1,5 +1,5 @@
 - name: Get Docker Swarm manager IP
-  ansible.builtin.command: docker info --format '{{ "{{ .Swarm.NodeAddr }}" }}'
+  ansible.builtin.command: docker info --format '{% raw %}{{ .Swarm.NodeAddr }}{% endraw %}'
   register: swarm_manager_ip
   delegate_to: localhost
   changed_when: false

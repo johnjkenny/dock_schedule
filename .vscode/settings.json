@@ -24,6 +24,7 @@
         "dschedule",
         "dsdb",
         "EECDH",
+        "endraw",
         "envsubst",
         "exportfs",
         "extravars",

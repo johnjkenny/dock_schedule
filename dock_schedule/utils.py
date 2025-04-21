@@ -62,12 +62,11 @@ class Utils():
         return self.run_ansible_playbook('create_swarm.yml', self.localhost_inventory)
 
     def add_docker_swarm_node(self, host: str, ip: str):
-        self.log.info('Adding docker swarm node')
+        self.log.info(f'Adding {host} to swarm cluster')
         return self.run_ansible_playbook('add_node_to_swarm.yml', self.__remote_inventory(host, ip))
 
     def remove_docker_swarm_node(self, host: str, ip: str):
-        self.log.info('Removing docker swarm node')
-        # Update to drain the node before removing it
+        self.log.info(f'Removing {host} from swarm cluster')
         return self.run_ansible_playbook('remove_node_from_swarm.yml', self.__remote_inventory(host, ip))
 
     def run_ansible_playbook(self, playbook: str, inventory: dict):
