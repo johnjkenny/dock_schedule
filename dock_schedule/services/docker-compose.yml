@@ -29,6 +29,10 @@ services:
     build: /opt/dock-schedule/container_scraper
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
     networks:
       - dock-schedule-proxy
     secrets:
@@ -139,7 +143,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /opt/dock-schedule/prometheus/data:/prometheus
-      - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - dock-schedule-proxy
     secrets:
