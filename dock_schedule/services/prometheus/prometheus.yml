@@ -35,6 +35,38 @@ scrape_configs:
       - source_labels: [__meta_dockerswarm_node_hostname]
         target_label: instance
 
+  - job_name: Container-Scrape
+    scheme: https
+    params:
+      ip: [$1]
+    tls_config:
+      ca_file: /etc/prometheus/ca.crt
+      cert_file: /etc/prometheus/host.crt
+      key_file: /etc/prometheus/host.key
+      insecure_skip_verify: false
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        port: 8070
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_container_label_prometheus_job]
+        regex: container-stats
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: dock-schedule-proxy
+        action: keep
+      - source_labels: [__address__]
+        regex: (.+):\d+
+        target_label: __param_ip
+      - source_labels: [__address__]
+        replacement: proxy:8085
+        target_label: __address__
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: instance
+
   - job_name: Broker-Scrape
     scheme: https
     params:

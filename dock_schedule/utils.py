@@ -6,6 +6,8 @@ from tempfile import TemporaryDirectory
 from json import dump
 from random import choices, choice
 from logging import Logger
+from ipaddress import ip_address
+from socket import gethostname
 
 import ansible_runner
 
@@ -31,6 +33,10 @@ class Utils():
 
     def __remote_inventory(self, host: str, ip: str) -> dict:
         return {'all': {'hosts': {host: {'ansible_host': ip}}}}
+
+    def _set_cert_permissions(self) -> bool:
+        return self._run_cmd('chmod -R 440 /opt/dock-schedule/certs')[1] and \
+            self._run_cmd('chown -R root:root /opt/dock-schedule/certs')[1]
 
     def _run_cmd(self, cmd: str, ignore_error: bool = False, log_output: bool = False) -> tuple:
         """Run a command and return the output
@@ -115,7 +121,7 @@ class Init(Utils):
                 return False
         return True
 
-    def create_swarm_dir_tree(self):
+    def __create_swarm_dir_tree(self):
         self.log.info('Creating swarm directory tree')
         for path in ['ansible/playbooks', 'broker/data', 'grafana/data', 'jobs', 'mongodb/data', 'prometheus/data',
                      'certs']:
@@ -161,7 +167,7 @@ class Init(Utils):
             self.log.exception('Failed to copy dock-schedule files')
             return False
 
-    def init_cert_store(self):
+    def __init_cert_store(self):
         self.log.info('Initializing certificate store')
         if self.__create_cert_subject():
             return self.certs._initialize_cert_authority(self.__force) and self.__generate_container_ssl_certs()
@@ -206,14 +212,36 @@ class Init(Utils):
 
     def __generate_container_ssl_certs(self):
         for service in ['broker', 'grafana', 'mongodb', 'mongodb_scraper', 'prometheus', 'scheduler', 'node_scraper',
-                        'worker', 'proxy', 'proxy_scraper']:
+                        'worker', 'proxy', 'proxy_scraper', 'container_scraper']:
             if not self.certs.create(service, [service, 'localhost', '127.0.0.1']):
                 self.log.error(f'Failed to create certificate for {service}')
                 return False
         return True
 
+    def __get_primary_ip(self):
+        rsp = self._run_cmd('hostname -I')
+        if rsp[1]:
+            ip = rsp[0].split()[0]
+            try:
+                ip_address(ip)
+                return ip
+            except Exception:
+                self.log.error(f'Failed to get primary IP address: {ip}')
+        else:
+            self.log.error('Failed to get primary IP address')
+        return None
+
+    def __generate_swarm_manager_ssl_certs(self):
+        self.log.info('Generating SSL certificates for swarm manager')
+        ip = self.__get_primary_ip()
+        if ip:
+            hostname = gethostname().split('.')[0]
+            if self.certs.create(hostname, [hostname, ip, 'localhost', '127.0.0.1']):
+                return self._set_cert_permissions()
+        return False
+
     def _run(self):
-        for method in [self.__create_service_users, self.create_swarm_dir_tree, self.init_cert_store,
+        for method in [self.__create_service_users, self.__create_swarm_dir_tree, self.__init_cert_store,
                        self.create_docker_swarm]:
             if not method():
                 return False

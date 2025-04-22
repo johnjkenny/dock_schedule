@@ -5,6 +5,7 @@
   become: true
   vars:
     advertise_addr: "{{ ansible_default_ipv4.address }}"
+    hostname: "{{ ansible_hostname }}"
   tasks:
 
     - name: Install NFS
@@ -15,6 +16,9 @@
 
     - name: Install Docker
       ansible.builtin.import_tasks: tasks/install_docker.yml
+
+    - name: Set Docker daemon config
+      ansible.builtin.import_tasks: tasks/set_docker_daemon_config.yml
 
     - name: Create Swarm
       ansible.builtin.import_tasks: tasks/create_swarm.yml
