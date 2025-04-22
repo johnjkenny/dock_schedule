@@ -1,0 +1,47 @@
+- name: Ensure docker directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Copy node TLS CA to Docker directory
+  ansible.builtin.command: "scp /opt/dock-schedule/certs/dock-schedule-ca.crt /etc/docker/ca.crt"
+  args:
+    creates: /etc/docker/ca.crt
+
+- name: Copy node TLS cert to Docker directory
+  ansible.builtin.command: "scp /opt/dock-schedule/certs/{{ ansible_hostname }}.crt /etc/docker/host.crt"
+  args:
+    creates: /etc/docker/host.crt
+
+- name: Copy node TLS key to Docker directory
+  ansible.builtin.command: "scp /opt/dock-schedule/certs/{{ ansible_hostname }}.key /etc/docker/host.key"
+  args:
+    creates: /etc/docker/host.key
+
+- name: Set TLS cert permissions
+  ansible.builtin.command: "chmod 440 /etc/docker/ca.crt /etc/docker/host.crt /etc/docker/host.key"
+  changed_when: true
+
+- name: Set Docker daemon config
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "tls": true,
+        "tlsverify": true,
+        "tlscacert": "/etc/docker/ca.crt",
+        "tlscert": "/etc/docker/host.crt",
+        "tlskey": "/etc/docker/host.key",
+        "metrics-addr": "0.0.0.0:9323",
+        "experimental": true
+      }
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart Docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+    enabled: true

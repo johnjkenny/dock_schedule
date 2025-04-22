@@ -24,6 +24,31 @@ services:
       timeout: 5s
       retries: 3
 
+  container_scraper:
+    image: container_scraper:latest
+    build: /opt/dock-schedule/container_scraper
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dock-schedule-proxy
+    secrets:
+      - ca_crt
+      - container_scraper_crt
+      - container_scraper_key
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'cadvisor']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - prometheus-job=container-stats
+
   proxy_scraper:
     image: proxy_scraper:latest
     build: /opt/dock-schedule/proxy_scraper
@@ -114,6 +139,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /opt/dock-schedule/prometheus/data:/prometheus
+      - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - dock-schedule-proxy
     secrets:
@@ -253,6 +279,7 @@ services:
     volumes:
       - /opt/dock-schedule/ansible:/app/ansible
       - /opt/dock-schedule/jobs:/app/jobs
+      - /opt/dock-schedule/worker/worker.py:/app/worker.py
     networks:
       - dock-schedule-broker
       - dock-schedule-job-db
@@ -311,6 +338,10 @@ secrets:
     file: /opt/dock-schedule/certs/broker.crt
   broker_key:
     file: /opt/dock-schedule/certs/broker.key
+  container_scraper_crt:
+    file: /opt/dock-schedule/certs/container_scraper.crt
+  container_scraper_key:
+    file: /opt/dock-schedule/certs/container_scraper.key
   grafana_crt:
     file: /opt/dock-schedule/certs/grafana.crt
   grafana_key:
