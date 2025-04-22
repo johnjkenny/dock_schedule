@@ -1,9 +1,10 @@
+import requests
 from pathlib import Path
 from shutil import copytree, ignore_patterns
 from string import ascii_letters
 from subprocess import run
 from tempfile import TemporaryDirectory
-from json import dump
+from json import dump, loads
 from random import choices, choice
 from logging import Logger
 from ipaddress import ip_address
@@ -13,6 +14,7 @@ import ansible_runner
 
 from dock_schedule.logger import get_logger
 from dock_schedule.cert_auth import CertStore
+from dock_schedule.color import Color
 
 
 class Utils():
@@ -31,7 +33,23 @@ class Utils():
     def localhost_inventory(self):
         return {'all': {'hosts': {'localhost': {'ansible_connection': 'local'}}}}
 
-    def __remote_inventory(self, host: str, ip: str) -> dict:
+    def _display_error(self, message: str):
+        Color().print_message(message, 'red')
+        return False
+
+    def _display_success(self, message: str):
+        Color().print_message(message, 'green')
+        return True
+
+    def _display_info(self, message: str):
+        Color().print_message(message, 'cyan')
+        return True
+
+    def _display_warning(self, message: str):
+        Color().print_message(message, 'yellow')
+        return True
+
+    def _remote_inventory(self, host: str, ip: str) -> dict:
         return {'all': {'hosts': {host: {'ansible_host': ip}}}}
 
     def _set_cert_permissions(self) -> bool:
@@ -67,13 +85,8 @@ class Utils():
         self.log.info('Creating docker swarm')
         return self.run_ansible_playbook('create_swarm.yml', self.localhost_inventory)
 
-    def add_docker_swarm_node(self, host: str, ip: str):
-        self.log.info(f'Adding {host} to swarm cluster')
-        return self.run_ansible_playbook('add_node_to_swarm.yml', self.__remote_inventory(host, ip))
-
-    def remove_docker_swarm_node(self, host: str, ip: str):
-        self.log.info(f'Removing {host} from swarm cluster')
-        return self.run_ansible_playbook('remove_node_from_swarm.yml', self.__remote_inventory(host, ip))
+    def set_workers(self, worker_qty: int = 1):
+        return self._run_cmd(f'docker service scale dock-schedule_worker={worker_qty}')[1]
 
     def run_ansible_playbook(self, playbook: str, inventory: dict):
         with TemporaryDirectory(dir='/tmp', delete=True) as temp_dir:
@@ -86,6 +99,187 @@ class Utils():
                 self.log.error(f'Failed to run ansible playbook: {result.status}')
                 return False
             return True
+
+
+class Swarm(Utils):
+    def __init__(self, logger: Logger = None):
+        super().__init__(logger)
+        self.hostname = gethostname().split('.')[0]
+
+    @property
+    def cert_dir(self):
+        return '/opt/dock-schedule/certs'
+
+    @property
+    def cert_params(self):
+        return {
+            'cert': (f'{self.cert_dir}/{self.hostname}.crt', f'{self.cert_dir}/{self.hostname}.key'),
+            'verify': f'{self.cert_dir}/dock-schedule-ca.crt',
+        }
+
+    @property
+    def query_url(self):
+        return 'https://proxy:8080/api/v1/query'
+
+    def node_snap_data(self, name: str):
+        return {
+            'load_avg_1m': f'node_load1{{job="Node-Scrape", instance="{name}"}}',
+            'load_avg_5m': f'node_load5{{job="Node-Scrape", instance="{name}"}}',
+            'load_avg_15m': f'node_load15{{job="Node-Scrape", instance="{name}"}}',
+            "cpu_cores": f'count(node_cpu_seconds_total{{mode="system", job="Node-Scrape", instance="{name}"}})',
+            'mem_available': f'node_memory_MemAvailable_bytes{{job="Node-Scrape", instance="{name}"}}',
+            'mem_total': f'node_memory_MemTotal_bytes{{job="Node-Scrape", instance="{name}"}}',
+            'disk_avail': f'node_filesystem_avail_bytes{{job="Node-Scrape", instance="{name}", mountpoint="/"}}',
+            'disk_total': f'node_filesystem_size_bytes{{job="Node-Scrape", instance="{name}", mountpoint="/"}}',
+        }
+
+    def container_snap_data(self, node: str, container: str):
+        return {
+            'cpu': f'rate(container_cpu_usage_seconds_total{{job="Container-Scrape", instance="{node}", \
+                name="{container}"}}[1m])',
+            'mem': f'container_memory_usage_bytes{{job="Container-Scrape", instance="{node}", name="{container}"}}'
+        }
+
+    def get_node_containers(self, name: str = 'dock-schedule-2'):
+        query = f'container_last_seen{{instance="{name}", job="Container-Scrape"}}'
+        try:
+            rsp = requests.get(self.query_url, params={'query': query}, **self.cert_params)
+            if rsp.status_code == 200:
+                for result in rsp.json().get('data', {}).get('result', []):
+                    container = result.get('metric', {}).get('name')
+                    if container:
+                        yield container
+            else:
+                self.log.error(f'Failed to container info for node {name}: [{rsp.status_code}] {rsp.text}')
+        except Exception:
+            self.log.exception('Failed to get node info from Prometheus query')
+
+    def __get_node_verbose_info(self, node_name: str):
+        data = {}
+        for key, query in self.node_snap_data(node_name).items():
+            try:
+                rsp = requests.get(self.query_url, params={'query': query}, **self.cert_params)
+                if rsp.status_code == 200:
+                    data[key] = float(rsp.json().get('data', {}).get('result', [])[0].get('value', [])[1])
+                else:
+                    self.log.error(f'Failed to get node info from Prometheus query: [{rsp.status_code}] {rsp.text}')
+                    data[key] = 0
+            except Exception:
+                continue
+        return data
+
+    def __get_container_verbose_info(self, node_name: str, container_name: str):
+        data = {}
+        for key, query in self.container_snap_data(node_name, container_name).items():
+            try:
+                rsp = requests.get(self.query_url, params={'query': query}, **self.cert_params)
+                if rsp.status_code == 200:
+                    data[key] = float(rsp.json().get('data', {}).get('result', [])[0].get('value', [])[1])
+                else:
+                    self.log.error(f'Failed to get node info from Prometheus query: [{rsp.status_code}] {rsp.text}')
+                    data[key] = 0
+            except Exception:
+                continue
+        return data
+
+    def get_swarm_nodes(self):
+        rsp = self._run_cmd('docker node ls --format json')
+        if rsp[1]:
+            for line in rsp[0].splitlines():
+                try:
+                    yield loads(line.strip())
+                except Exception:
+                    self.log.exception('Failed to parse JSON')
+
+    def get_node_ip(self, node_name: str):
+        rsp = self._run_cmd(f'docker node inspect {node_name} --format "{{{{ .Status.Addr }}}}"')
+        if rsp[1]:
+            return rsp[0].strip()
+        return None
+
+    def __determine_display_color(self, percent: float) -> str:
+        if percent < 70:
+            return 'green'
+        if percent < 90:
+            return 'yellow'
+        else:
+            return 'red'
+
+    def __display_node_cpu_verbose_info(self, info: dict, color: Color):
+        one_min = info.get('load_avg_1m') / info.get('cpu_cores') * 100
+        one_min_color = self.__determine_display_color(one_min)
+        five_min = info.get('load_avg_5m') / info.get('cpu_cores') * 100
+        five_min_color = self.__determine_display_color(five_min)
+        fifteen_min = info.get('load_avg_15m') / info.get('cpu_cores') * 100
+        fifteen_min_color = self.__determine_display_color(fifteen_min)
+        color.print_message(f"    CPU Load Avg (1m):    {one_min:.1f}%", one_min_color)
+        color.print_message(f"    CPU Load Avg (5m):    {five_min:.1f}%", five_min_color)
+        color.print_message(f"    CPU Load Avg (15m):   {fifteen_min:.1f}%", fifteen_min_color)
+
+    def __display_node_memory_verbose_info(self, info: dict, color: Color):
+        info['mem_used'] = info["mem_total"] - info["mem_available"]
+        mem_pct = info['mem_used'] / info["mem_total"] * 100 if info["mem_total"] else 0
+        mem_color = self.__determine_display_color(mem_pct)
+        color.print_message(f"    Memory Used:          {info['mem_used'] / (1024**3):.2f} GiB ({mem_pct:.1f}%)",
+                            mem_color)
+
+    def __display_node_disk_verbose_info(self, info: dict, color: Color):
+        disk_used = info["disk_total"] - info["disk_avail"]
+        disk_pct = disk_used / info["disk_total"] * 100 if info["disk_total"] else 0
+        disk_color = self.__determine_display_color(disk_pct)
+        color.print_message(f"    Disk Used:            {disk_used / (1024**3):.2f} GiB ({disk_pct:.1f}%)", disk_color)
+
+    def __display_container_cpu_info(self, info: dict, color: Color, cpu_qty: float | int):
+        cpu = info.get('cpu')
+        if cpu:
+            one_min = info.get('cpu') / cpu_qty * 100
+            one_min_color = self.__determine_display_color(one_min)
+            color.print_message(f"\t    CPU (1m):    {one_min:.1f}%", one_min_color)
+        else:
+            color.print_message("\t    CPU (1m):    0.0%", 'green')
+
+    def __display_container_memory_info(self, info: dict, color: Color, mem_used: float | int):
+        mem_pct = info["mem"] / mem_used * 100 if mem_used else 0
+        mem_color = self.__determine_display_color(mem_pct)
+        color.print_message(f"\t    Memory Used: {info['mem'] / (1024**2):.2f} MiB ({mem_pct:.1f}%)", mem_color)
+
+    def __display_node_verbose_info(self, node_name: str):
+        info = self.__get_node_verbose_info(node_name)
+        if info:
+            color = Color()
+            self.__display_node_cpu_verbose_info(info, color)
+            self.__display_node_memory_verbose_info(info, color)
+            self.__display_node_disk_verbose_info(info, color)
+            color.print_message('    Containers:', 'bright-cyan')
+            for container in self.get_node_containers(node_name):
+                color.print_message(f'\t{container}', 'magenta')
+                container_info = self.__get_container_verbose_info(node_name, container)
+                self.__display_container_cpu_info(container_info, color, info.get('cpu_cores'))
+                self.__display_container_memory_info(container_info, color, info.get('mem_used'))
+
+    def display_swarm_nodes(self, verbose: bool = False):
+        for node in self.get_swarm_nodes():
+            node: dict
+            manager = '[Leader]' if node.get('ManagerStatus') == 'Leader' else ''
+            ip = self.get_node_ip(node.get('Hostname'))
+            if node.get('Status') == 'Ready':
+                if node.get('Availability') == 'Active':
+                    self._display_info(f'{node.get("Hostname")} ({ip}) {manager}')
+                else:
+                    self._display_warning(f'{node.get("Hostname")} ({ip}): {node.get("Availability")} {manager}')
+                if verbose:
+                    self.__display_node_verbose_info(node.get('Hostname'))
+            else:
+                self._display_error(f'{node.get("Hostname")} ({ip}): {node.get("Status")} {manager}')
+        return True
+
+    def add_docker_swarm_node(self, node_name: str, ip: str):
+        self.log.info(f'Adding {node_name} to swarm cluster')
+        return self.run_ansible_playbook('add_node_to_swarm.yml', self._remote_inventory(node_name, ip))
+
+    def remove_docker_swarm_node(self, node_name: str, ip: str):
+        self.log.info(f'Removing {node_name} from swarm cluster')
+        return self.run_ansible_playbook('remove_node_from_swarm.yml', self._remote_inventory(node_name, ip))
 
 
 class Init(Utils):
@@ -170,7 +364,8 @@ class Init(Utils):
     def __init_cert_store(self):
         self.log.info('Initializing certificate store')
         if self.__create_cert_subject():
-            return self.certs._initialize_cert_authority(self.__force) and self.__generate_container_ssl_certs()
+            if self.certs._initialize_cert_authority(self.__force) and self.__generate_container_ssl_certs():
+                return self.__generate_swarm_manager_ssl_certs()
         return False
 
     def __fill_subject_randoms(self, subject: dict) -> dict:

@@ -45,6 +45,7 @@
         "lineinfile",
         "mmcblk",
         "modsecurity",
+        "mountpoint",
         "msie",
         "mypy",
         "nodelay",

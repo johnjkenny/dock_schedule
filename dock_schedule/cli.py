@@ -1,16 +1,20 @@
 from argparse import REMAINDER
 
 from dock_schedule.arg_parser import ArgParser
-from dock_schedule.utils import Init, Utils
+from dock_schedule.utils import Init, Utils, Swarm
 
 
 def parse_parent_args(args: dict):
     if args.get('init'):
         return init(args['init'])
-    if args.get('addNode'):
-        return add_node(args['addNode'])
-    if args.get('removeNode'):
-        return remove_node(args['removeNode'])
+    if args.get('workers'):
+        return workers(args['workers'])
+    if args.get('services'):
+        return services(args['services'])
+    if args.get('swarm'):
+        return swarm(args['swarm'])
+    if args.get('containers'):
+        return containers(args['containers'])
     return True
 
 
@@ -21,14 +25,24 @@ def parent():
             'help': 'Initialize dock-schedule environment',
             'nargs': REMAINDER
         },
-        'addNode': {
-            'short': 'a',
-            'help': 'Add a node to the dock-schedule swarm',
+        'swarm': {
+            'short': 'S',
+            'help': 'Dock Schedule swarm commands',
             'nargs': REMAINDER
         },
-        'removeNode': {
-            'short': 'R',
-            'help': 'Remove a node from the dock-schedule swarm',
+        'workers': {
+            'short': 'w',
+            'help': 'Dock Schedule worker commands',
+            'nargs': REMAINDER
+        },
+        'services': {
+            'short': 's',
+            'help': 'Dock Schedule services commands',
+            'nargs': REMAINDER
+        },
+        'containers': {
+            'short': 'c',
+            'help': 'Dock Schedule containers commands',
             'nargs': REMAINDER
         },
     }).set_arguments()
@@ -61,49 +75,164 @@ def init(parent_args: list = None):
     exit(0)
 
 
-def parse_add_node_args(args: dict):
-    if args.get('name') and args.get('ip'):
-        return Utils().add_docker_swarm_node(args['name'], args['ip'])
+def parse_swarm_args(args: dict):
+    if args.get('addNode'):
+        if not args.get('name') or not args.get('ip'):
+            return Swarm()._display_error('Error: --name (-n) and --ip (-i) are required for swarm node add request')
+        return Swarm().add_docker_swarm_node(args['name'], args['ip'])
+    if args.get('removeNode'):
+        if not args.get('name') or not args.get('ip'):
+            return Swarm()._display_error('Error: --name (-n) and --ip (-i) are required for swarm node remove request')
+        return Swarm().remove_docker_swarm_node(args['name'], args['ip'])
+    if args.get('listNodes'):
+        return Swarm().display_swarm_nodes(args['verbose'])
     return True
 
 
-def add_node(parent_args: list = None):
-    args = ArgParser('Dock Schedule Add Node', parent_args, {
+def swarm(parent_args: list = None):
+    args = ArgParser('Dock Schedule Swarm', parent_args, {
+        'addNode': {
+            'short': 'a',
+            'help': 'Add a node to the dock-schedule swarm',
+            'action': 'store_true'
+        },
+        'removeNode': {
+            'short': 'R',
+            'help': 'Remove a node from the dock-schedule swarm',
+            'action': 'store_true'
+        },
         'name': {
             'short': 'n',
-            'help': 'Name of the node',
-            'required': True
+            'help': 'Name of the node to add or remove',
         },
         'ip': {
             'short': 'i',
-            'help': 'IP address of the node',
-            'required': True
+            'help': 'IP address of the node to add or remove',
         },
+        'listNodes': {
+            'short': 'l',
+            'help': 'List all nodes in the dock-schedule swarm',
+            'action': 'store_true'
+        },
+        'verbose': {
+            'short': 'v',
+            'help': 'Enable verbose output',
+            'action': 'store_true'
+        }
     }).set_arguments()
-    if not parse_add_node_args(args):
+    if not parse_swarm_args(args):
         exit(1)
     exit(0)
 
 
-def parse_remove_node_args(args: dict):
-    if args.get('name') and args.get('ip'):
-        return Utils().remove_docker_swarm_node(args['name'], args['ip'])
+def parse_workers_args(args: dict):
+    if args.get('qty'):
+        return Utils().set_workers(args['qty'])
     return True
 
 
-def remove_node(parent_args: list = None):
-    args = ArgParser('Dock Schedule Remove Node', parent_args, {
-        'name': {
-            'short': 'n',
-            'help': 'Name of the node',
-            'required': True
-        },
-        'ip': {
-            'short': 'i',
-            'help': 'IP address of the node',
-            'required': True
+def workers(parent_args: list = None):
+    args = ArgParser('Dock Scheduler Worker Commands', parent_args, {
+        'qty': {
+            'short': 'q',
+            'help': 'Set the number of workers. This is the number of total workers deployed. Default: 1',
+            'default': 1,
+            'type': int,
         },
     }).set_arguments()
-    if not parse_remove_node_args(args):
+    if not parse_workers_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_service_args(args: dict):
+    return True
+
+
+def services(parent_args: list = None):
+    args = ArgParser('Dock Schedule Services', parent_args, {
+        'rebalance': {
+            'short': 'r',
+            'help': 'Rebalance the dock-schedule services among swarm nodes',
+            'action': 'store_true'
+        },
+        'start': {
+            'short': 's',
+            'help': 'Start the dock-schedule services. Specify service name for specific service, else all is used.',
+            'default': 'all',
+        },
+        'stop': {
+            'short': 'S',
+            'help': 'Stop the dock-schedule services. Specify service name for specific service, else all is used.',
+            'default': 'all',
+        },
+        'reload': {
+            'short': 'R',
+            'help': 'Reload a dock-schedule service (specify service name)',
+        },
+        'list': {
+            'short': 'l',
+            'help': 'List dock-schedule services and their status',
+            'action': 'store_true'
+        }
+    }).set_arguments()
+    if not parse_service_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_container_args(args: dict):
+    return True
+
+
+def containers(parent_args: list = None):
+    args = ArgParser('Dock Schedule Containers', parent_args, {
+        'get': {
+            'short': 'g',
+            'help': 'Get dock-schedule service containers and their status',
+        },
+        'logs': {
+            'short': 'l',
+            'help': 'Display logs for a dock-schedule service container (specify container name)',
+        }
+    }).set_arguments()
+    if not parse_container_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_job_args(args: dict):
+    return True
+
+
+def jobs(parent_args: list = None):
+    args = ArgParser('Dock Schedule Jobs', parent_args, {
+        'schedule': {
+            'short': 's',
+            'help': 'Get dock-schedule job schedule',
+        },
+        'create': {
+            'short': 'c',
+            'help': 'Create a dock-schedule job schedule',
+        },
+        'delete': {
+            'short': 'D',
+            'help': 'Delete a dock-schedule job schedule',
+        },
+        'update': {
+            'short': 'u',
+            'help': 'Update a dock-schedule job schedule',
+        },
+        'run': {
+            'short': 'r',
+            'help': 'Run a dock-schedule job (specify job name)',
+        },
+        'args': {
+            'short': 'a',
+            'help': 'Get dock-schedule job arguments',
+            'nargs': '+'
+        },
+    }).set_arguments()
+    if not parse_job_args(args):
         exit(1)
     exit(0)
