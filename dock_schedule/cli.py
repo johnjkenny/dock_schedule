@@ -1,7 +1,7 @@
 from argparse import REMAINDER
 
 from dock_schedule.arg_parser import ArgParser
-from dock_schedule.utils import Init, Utils, Swarm
+from dock_schedule.utils import Init, Utils, Swarm, Services
 
 
 def parse_parent_args(args: dict):
@@ -37,12 +37,12 @@ def parent():
         },
         'services': {
             'short': 's',
-            'help': 'Dock Schedule services commands',
+            'help': 'Dock Schedule service commands',
             'nargs': REMAINDER
         },
         'containers': {
             'short': 'c',
-            'help': 'Dock Schedule containers commands',
+            'help': 'Dock Schedule container commands',
             'nargs': REMAINDER
         },
     }).set_arguments()
@@ -146,35 +146,53 @@ def workers(parent_args: list = None):
 
 
 def parse_service_args(args: dict):
+    if args.get('balance'):
+        return Services().rebalance_services()
+    if args.get('reload'):
+        return Services().reload_services(args['reload'])
+    if args.get('start'):
+        return Services().start_services(args['start'])
+    if args.get('stop'):
+        return Services().stop_services(args['stop'])
+    if args.get('list'):
+        return Services().display_services()
     return True
 
 
 def services(parent_args: list = None):
     args = ArgParser('Dock Schedule Services', parent_args, {
-        'rebalance': {
-            'short': 'r',
-            'help': 'Rebalance the dock-schedule services among swarm nodes',
+        'balance': {
+            'short': 'B',
+            'help': 'Balance the dock-schedule services among swarm nodes',
             'action': 'store_true'
         },
         'start': {
             'short': 's',
-            'help': 'Start the dock-schedule services. Specify service name for specific service, else all is used.',
-            'default': 'all',
+            'help': 'Start the dock-schedule service(s). Specify service name for specific service, else "all" is \
+                used. Use comma separated list for multiple services (example: service1,service2)',
+            'nargs': '?',
+            'const': 'all',
+            'default': None
         },
         'stop': {
             'short': 'S',
-            'help': 'Stop the dock-schedule services. Specify service name for specific service, else all is used.',
-            'default': 'all',
+            'help': 'Stop the dock-schedule service(s). Specify service name for specific service, else "all" is \
+                used. Use comma separated list for multiple services (example: service1,service2)',
+            'nargs': '?',
+            'const': 'all',
+            'default': None
         },
         'reload': {
             'short': 'R',
-            'help': 'Reload a dock-schedule service (specify service name)',
+            'help': 'Reload a dock-schedule service (specify service name or ID). Use comma separated list for \
+                multiple services (example: service1,service2). Use "all" to reload all services.',
         },
         'list': {
             'short': 'l',
             'help': 'List dock-schedule services and their status',
             'action': 'store_true'
         }
+        # ToDO: Add build methods???? Maybe?
     }).set_arguments()
     if not parse_service_args(args):
         exit(1)

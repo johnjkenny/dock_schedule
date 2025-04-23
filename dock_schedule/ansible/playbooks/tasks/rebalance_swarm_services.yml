@@ -14,7 +14,7 @@
   changed_when: true
 
 - name: MongoDB-Scraper Service Force Update
-  ansible.builtin.command: docker service update --force dock-schedule_node_scraper
+  ansible.builtin.command: docker service update --force dock-schedule_mongodb_scraper
   delegate_to: localhost
   changed_when: true
 
