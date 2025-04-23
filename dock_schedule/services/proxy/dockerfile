@@ -1,4 +1,4 @@
-FROM nginx:latest
+FROM nginx@sha256:babad783dca44e555a1d3892a462bc798b2eb3ac462be93da8bea9db344f8bbc
 
 COPY nginx.conf /etc/nginx/
 COPY docker-entrypoint.sh /custom-entrypoint.sh

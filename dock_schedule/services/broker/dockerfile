@@ -1,4 +1,4 @@
-FROM rabbitmq:4
+FROM rabbitmq@sha256:42ecb6d18fbd64ce9c0e4067f7b7f7015c1f73b7dac7f8aeaca588e2a22c1817
 
 RUN groupmod -g 3001 rabbitmq && usermod -u 3001 rabbitmq -g 3001
 COPY rabbitmq.conf /etc/rabbitmq/rabbitmq.conf

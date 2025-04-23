@@ -1,4 +1,4 @@
-FROM bitnami/mongodb-exporter:latest
+FROM bitnami/mongodb-exporter@sha256:c72cc64e9b63c0f318f438600eeb1440a09eed8704007e280ad70a4fba88d2bc
 
 USER root
 COPY docker-entrypoint.sh /custom-entrypoint.sh

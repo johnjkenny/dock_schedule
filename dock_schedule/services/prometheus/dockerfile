@@ -1,4 +1,4 @@
-FROM prom/prometheus:latest
+FROM prom/prometheus@sha256:b41a46cf049d3865d87ba72f6c531b688f1651a579c86f31584f41ee6d45a437
 
 USER root
 COPY *.yml /etc/prometheus/

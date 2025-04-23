@@ -1,4 +1,4 @@
-FROM bitnami/nginx-exporter:latest
+FROM bitnami/nginx-exporter@sha256:8f576132e52b21641dc3b439eb45ef5ff157beda1ea4e5c814e998795ec95748
 
 USER root
 COPY docker-entrypoint.sh /custom-entrypoint.sh

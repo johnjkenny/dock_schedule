@@ -1,4 +1,4 @@
-FROM mongodb/mongodb-community-server:7.0.16-ubuntu2204
+FROM mongodb/mongodb-community-server@sha256:78cb3e9a9c6b1be288e1e79f95008cbe82008637c002df587447c3ef2ff1d682
 
 USER root
 RUN userdel mongodb
