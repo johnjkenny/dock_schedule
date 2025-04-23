@@ -1,4 +1,4 @@
-FROM bitnami/cadvisor:latest
+FROM bitnami/cadvisor@sha256:cff69e51434295ff9f854b1640cf7530055448f315265ac4230899138e6792e4
 
 USER root
 COPY docker-entrypoint.sh /custom-entrypoint.sh

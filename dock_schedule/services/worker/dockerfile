@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python@sha256:416855cb95a0dd2b7149c91f4af88549def1af9c6c4fa9ab78404578bc97271d
 
 WORKDIR /app
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
