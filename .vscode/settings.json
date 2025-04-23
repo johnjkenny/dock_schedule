@@ -66,6 +66,7 @@
         "pycache",
         "pymongo",
         "rabbitmq",
+        "reloadable",
         "resolvelib",
         "rgba",
         "rootfs",
