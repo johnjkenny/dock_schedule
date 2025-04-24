@@ -23,7 +23,14 @@ try {
   db.createCollection("jobs");
   db.jobs.createIndex({"name": 1});
   db.jobs.createIndex({"result": 1});
-  db.jobs.createIndex({"expiry_time": 1}, {expireAfterSeconds: 0});
+  db.jobs.createIndex({"expiryTime": 1}, {expireAfterSeconds: 0});
+
+  db.createCollection("cronUpdate");
+  db.jobsUpdate.insertOne({_id: 1, update: false});
+
+  db.createCollection("crons");
+  db.crons.createIndex({"name": 1});
+  db.crons.createIndex({"disabled": 1});
 
   print("User created successfully.");
   quit(0);

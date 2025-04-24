@@ -197,6 +197,8 @@ services:
     networks:
       - dock-schedule-job-db
       - dock-schedule-proxy
+    ports:
+      - 27017:27017
     secrets:
       - mongo_user
       - mongo_passwd

@@ -1,7 +1,7 @@
 from argparse import REMAINDER
 
 from dock_schedule.arg_parser import ArgParser
-from dock_schedule.utils import Init, Utils, Swarm, Services
+from dock_schedule.utils import Init, Utils, Swarm, Services, Schedule
 
 
 def parse_parent_args(args: dict):
@@ -15,11 +15,13 @@ def parse_parent_args(args: dict):
         return swarm(args['swarm'])
     if args.get('containers'):
         return containers(args['containers'])
+    if args.get('jobs'):
+        return jobs(args['jobs'])
     return True
 
 
 def parent():
-    args = ArgParser('Dock Schedule Commands', None, {
+    args = ArgParser('Dock Schedule Parent Commands', None, {
         'init': {
             'short': 'I',
             'help': 'Initialize dock-schedule environment',
@@ -45,6 +47,11 @@ def parent():
             'help': 'Dock Schedule container commands',
             'nargs': REMAINDER
         },
+        'jobs': {
+            'short': 'j',
+            'help': 'Dock Schedule job commands',
+            'nargs': REMAINDER
+        }
     }).set_arguments()
     if not parse_parent_args(args):
         exit(1)
@@ -58,7 +65,7 @@ def parse_init_args(args: dict):
 
 
 def init(parent_args: list = None):
-    args = ArgParser('Dock Schedule Initialization', parent_args, {
+    args = ArgParser('Dock Schedule: Initialization', parent_args, {
         'run': {
             'short': 'r',
             'help': 'Run initialization',
@@ -90,7 +97,7 @@ def parse_swarm_args(args: dict):
 
 
 def swarm(parent_args: list = None):
-    args = ArgParser('Dock Schedule Swarm', parent_args, {
+    args = ArgParser('Dock Schedule: Swarm', parent_args, {
         'addNode': {
             'short': 'a',
             'help': 'Add a node to the dock-schedule swarm',
@@ -132,7 +139,7 @@ def parse_workers_args(args: dict):
 
 
 def workers(parent_args: list = None):
-    args = ArgParser('Dock Scheduler Worker Commands', parent_args, {
+    args = ArgParser('Dock Scheduler: Worker', parent_args, {
         'qty': {
             'short': 'q',
             'help': 'Set the number of workers. This is the number of total workers deployed. Default: 1',
@@ -160,7 +167,7 @@ def parse_service_args(args: dict):
 
 
 def services(parent_args: list = None):
-    args = ArgParser('Dock Schedule Services', parent_args, {
+    args = ArgParser('Dock Schedule: Services', parent_args, {
         'balance': {
             'short': 'B',
             'help': 'Balance the dock-schedule services among swarm nodes',
@@ -204,7 +211,7 @@ def parse_container_args(args: dict):
 
 
 def containers(parent_args: list = None):
-    args = ArgParser('Dock Schedule Containers', parent_args, {
+    args = ArgParser('Dock Schedule: Containers', parent_args, {
         'get': {
             'short': 'g',
             'help': 'Get dock-schedule service containers and their status',
@@ -220,18 +227,24 @@ def containers(parent_args: list = None):
 
 
 def parse_job_args(args: dict):
+    if args.get('schedule'):
+        return Schedule().display_job_schedule()
+    if args.get('create'):
+        return create_job(args['create'])
     return True
 
 
 def jobs(parent_args: list = None):
-    args = ArgParser('Dock Schedule Jobs', parent_args, {
+    args = ArgParser('Dock Schedule: Jobs', parent_args, {
         'schedule': {
             'short': 's',
             'help': 'Get dock-schedule job schedule',
+            'action': 'store_true'
         },
         'create': {
             'short': 'c',
             'help': 'Create a dock-schedule job schedule',
+            'nargs': REMAINDER
         },
         'delete': {
             'short': 'D',
@@ -254,3 +267,99 @@ def jobs(parent_args: list = None):
     if not parse_job_args(args):
         exit(1)
     exit(0)
+
+
+def parse_create_job_args(args: dict):
+    if args.get('name'):
+        return Schedule().create_job_cron(args)
+    return True
+
+
+def create_job(parent_args: list = None):
+    args = ArgParser('Dock Schedule: Create Job Cron', parent_args, {
+        'name': {
+            'short': 'n',
+            'help': 'Name of the job to create. Required to create a job cron',
+            'required': True,
+        },
+        'type': {
+            'short': 't',
+            'help': 'Type of the job to create. Options: python3, ansible, bash, php, node',
+            'choices': ['python3', 'ansible', 'bash', 'php', 'node'],
+        },
+        'run': {
+            'short': 'r',
+            'help': 'Name of script or playbook to run for the job. This should be located: \
+                /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or node type. \
+                /opt/dock-schedule/ansible/playbooks/<run> for ansible type',
+        },
+        'args': {
+            'short': 'a',
+            'help': 'Arguments to pass to the python3, bash, php or node script arg parser \
+                (example: "--arg1 value1", "--arg2 value2").',
+            'nargs': '+'
+        },
+        'frequency': {
+            'short': 'f',
+            'help': 'Frequency to run the job. Options: second, minute, hour, day',
+            'choices': ['second', 'minute', 'hour', 'day'],
+        },
+        'interval': {
+            'short': 'i',
+            'help': 'Interval to run the job based on the frequency. Must set either interval or at, but not both. \
+                "at" will take precedence. Options: \
+                second frequency: 1-infinity, \
+                minute frequency: 1-infinity, \
+                hour frequency: 1-infinity, \
+                day frequency: 1-infinity',
+            'type': int,
+        },
+        'at': {
+            'short': 'A',
+            'help': 'The time to run the job based on the frequency. Must set either interval or at, but not both. \
+                "at" will take precedence. Options: \
+                minute frequency: ":SS", \
+                hour frequency: "MM:SS" or ":MM", \
+                day frequency: "HH:MM:SS" or "HH:MM"',
+        },
+        'timezone': {
+            'short': 'T',
+            'help': 'Timezone to run the job. Used in junction with "at". Default: UTC',
+            'default': 'UTC'
+        },
+        'hostInventory': {
+            'short': 'H',
+            'help': 'Host inventory to run remote ansible job on. Requires key=value pairs: \
+                "name=hostname, ip=ipaddress". Leave empty for the ansible job to run locally on the worker'
+        },
+        'extraVars': {
+            'short': 'e',
+            'help': 'Extra vars to pass to the ansible job. Requires key=value pairs separated by comma. \
+                "var1=value1, var2=value2". These will be directly used in the ansible playbook'
+        },
+        'disabled': {
+            'short': 'd',
+            'help': 'If the job is disabled. This will cause the job to not run until it is enabled. Default: False',
+            'action': 'store_true',
+        }
+    }).set_arguments()
+    if not parse_job_args(args):
+        exit(1)
+    exit(0)
+
+
+'''
+{
+    "name": "job_name",
+    "script_type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
+    "script_name": "job_name.py",  # the name of the script to run
+    "script_args": [],  # arguments to pass to the script
+    "frequency": "minute",  # second, minute, hour, day
+    "at": "00:00",  # time to run the job
+    "interval": 1,  # interval to run the job
+    "timezone": "UTC",  # timezone to run the job
+    "inventory": {}  # or leave empty for localhost
+    "extra_vars": {},  # extra vars for ansible jobs
+    'active': True  # if the job is active or not
+}
+'''

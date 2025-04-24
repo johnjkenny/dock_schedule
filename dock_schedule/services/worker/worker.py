@@ -67,7 +67,7 @@ class Mongo():
                 with open(f'/run/secrets/mongo_{key}', 'r') as f:
                     self.__creds[key] = f.read().strip()
             except Exception:
-                self.log.exception(f'Failed to load broker credentials for {key}')
+                self.log.exception(f'Failed to load mongodb credentials for {key}')
                 return False
         return True
 
@@ -434,7 +434,7 @@ class Worker():
         return {
             'ANSIBLE_CONFIG': '/app/ansible/ansible.cfg',
             'ANSIBLE_PYTHON_INTERPRETER': '/usr/bin/python3',
-            'ANSIBLE_PRIVATE_KEY_FILE': '/app/ansible/.key/.ansible_rsa',
+            'ANSIBLE_PRIVATE_KEY_FILE': '/app/ansible/.env/.ansible_rsa',
         }
 
     def __parse_host_inventory(self, inventory: Dict | List | None) -> Dict:
@@ -478,16 +478,16 @@ class Worker():
         return ''
 
     def __parse_playbook(self, job: Dict) -> str:
-        script_type = self.__parse_script_type(job.get('script_type'), job.get('script_name'))
+        script_type = self.__parse_script_type(job.get('type'), job.get('run'))
         if script_type:
             if script_type == 'ansible':
-                playbook = f'/app/ansible/playbooks/{job.get("script_name")}'
+                playbook = f'/app/ansible/playbooks/{job.get("run")}'
             else:
                 playbook = '/app/ansible/playbooks/run_job_script.yml'
-                job['extra_vars'] = {
-                    'script_file': job.get('script_name'),
+                job['extraVars'] = {
+                    'script_file': job.get('run'),
                     'script_type': script_type,
-                    'script_args': job.get('script_args', []),
+                    'script_args': job.get('args', []),
                 }
             return playbook
         return ''
@@ -514,7 +514,7 @@ class Worker():
 
     def run_job(self, job: Dict) -> bool:
         self.log.info(f'Running job: {job.get("name")} {job.get("_id")[:8]}')
-        inventory = self.__parse_host_inventory(job.get('inventory'))
+        inventory = self.__parse_host_inventory(job.get('hostInventory'))
         playbook = self.__parse_playbook(job)
         if inventory and playbook:
             with TemporaryDirectory(prefix=f'job-{job.get("_id")}-', dir='/tmp', delete=True) as temp_dir:
@@ -523,7 +523,7 @@ class Worker():
                     playbook=playbook,
                     inventory=inventory,
                     envvars=self.ansible_env_vars,
-                    extravars=job.get('extra_vars', {}),
+                    extravars=job.get('extraVars', {}),
                     quiet=True
                 ), job)
         return False
