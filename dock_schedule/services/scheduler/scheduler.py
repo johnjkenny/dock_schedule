@@ -5,8 +5,8 @@ import logging
 from time import sleep, gmtime
 from threading import Thread, Event
 from uuid import uuid4
-from json import dumps, load, loads
-from typing import List, Dict
+from json import dumps, loads
+from typing import Dict
 from urllib.parse import quote_plus
 from datetime import datetime, timedelta
 
@@ -68,7 +68,7 @@ class Mongo():
                 with open(f'/run/secrets/mongo_{key}', 'r') as f:
                     self.__creds[key] = f.read().strip()
             except Exception:
-                self.log.exception(f'Failed to load broker credentials for {key}')
+                self.log.exception(f'Failed to load mongodb credentials for {key}')
                 return False
         return True
 
@@ -89,8 +89,8 @@ class Mongo():
                 self.log.exception(f'Failed to get collection: {collection_name}')
         return None
 
-    def insert_one(self, document: dict):
-        collection = self.__get_collection()
+    def insert_one(self, collection_name: str, document: dict):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return collection.insert_one(document)
@@ -100,8 +100,8 @@ class Mongo():
                 self.log.exception(f'Failed to insert document: {document}')
         return None
 
-    def insert_many(self, documents: list[dict]):
-        collection = self.__get_collection()
+    def insert_many(self, collection_name: str, documents: list[dict]):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return collection.insert_many(documents)
@@ -111,8 +111,8 @@ class Mongo():
                 self.log.exception(f'Failed to insert documents: {documents}')
         return None
 
-    def get_one(self, *filters: dict):
-        collection = self.__get_collection()
+    def get_one(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return collection.find_one(*filters)
@@ -122,8 +122,8 @@ class Mongo():
                 self.log.exception('Failed to find data')
         return None
 
-    def get_all(self, *filters: dict):
-        collection = self.__get_collection()
+    def get_all(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return list(collection.find(*filters))
@@ -133,8 +133,8 @@ class Mongo():
                 self.log.exception('Failed to query collection')
         return []
 
-    def get_all_with_cursor(self, *filters: dict):
-        collection = self.__get_collection()
+    def get_all_with_cursor(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return collection.find(*filters)
@@ -144,8 +144,8 @@ class Mongo():
                 self.log.exception('Failed to query collection')
         return None
 
-    def update_one(self, query: dict, update: dict, upsert: bool = False):
-        collection = self.__get_collection()
+    def update_one(self, collection_name: str, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return collection.update_one(query, update, upsert=upsert)
@@ -155,8 +155,8 @@ class Mongo():
                 self.log.exception(f'Failed to update document: {query}')
         return None
 
-    def update_many(self, query: dict, update: dict, upsert: bool = False):
-        collection = self.__get_collection()
+    def update_many(self, collection_name: str, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 return collection.update_many(query, update, upsert=upsert)
@@ -166,8 +166,8 @@ class Mongo():
                 self.log.exception(f'Failed to update documents: {query}')
         return None
 
-    def delete_one(self, query: dict) -> bool:
-        collection = self.__get_collection()
+    def delete_one(self, collection_name: str, query: dict) -> bool:
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 collection.delete_one(query)
@@ -178,8 +178,8 @@ class Mongo():
                 self.log.exception(f'Failed to delete document: {query}')
         return False
 
-    def delete_many(self, query: dict) -> bool:
-        collection = self.__get_collection()
+    def delete_many(self, collection_name: str, query: dict) -> bool:
+        collection = self.__get_collection(collection_name)
         if collection is not None:
             try:
                 collection.delete_many(query)
@@ -531,13 +531,20 @@ class JobScheduler():
         self.log.error(f'Unknown schedule frequency: {freq}')
         return None
 
-    def __load_cron_file(self) -> List:
-        try:
-            with open('/app/crons.json', 'r') as file:
-                return load(file)
-        except Exception:
-            self.log.exception('Failed to load cron file')
-            return []
+    def __get_crons(self):
+        return self.__db.get_all('crons', {'disabled': False})
+
+    def __get_cron_update_state(self):
+        state: dict = self.__db.get_one('cronUpdate', {'_id': 1})
+        if state:
+            if state.get('update', False):
+                if not self.__db.update_one('cronUpdate', {'_id': 1}, {'$set': {'update': False}}):
+                    self.log.error('Failed to update cron update state')
+                    return False
+                return True
+        else:
+            self.log.error('Failed to get cron update state')
+        return False
 
     def _run_cron(self, cron: Dict):
         try:
@@ -545,29 +552,29 @@ class JobScheduler():
             job = {
                 '_id': job_id,
                 'name': cron.get('name', ''),
-                'script_type': cron.get('script_type', 'python3'),
-                'script_name': cron.get('script_name', ''),
-                'script_args': cron.get('script_args', []),
-                'inventory': cron.get('inventory', {}),
-                'extra_vars': cron.get('extra_vars', {}),
+                'type': cron.get('type'),
+                'run': cron.get('run', ''),
+                'args': cron.get('args', []),
+                'hostInventory': cron.get('hostInventory', {}),
+                'extraVars': cron.get('extraVars', {}),
                 'state': 'pending',
                 'result': None,
                 'error': None,
             }
             self.__publisher.send_msg(dumps(job).encode(), job_id)
-            job['expiry_time'] = timedelta(days=7) + datetime.now()
+            job['expiryTime'] = datetime.now() + timedelta(days=7)
         except Exception:
             self.log.exception('Failed to send job to broker')
             return False
-        return bool(self.__db.insert_one(job))
+        return bool(self.__db.insert_one('jobs', job))
 
     def set_cron_schedule(self):
-        for cron in self.__load_cron_file():
+        self._crons.clear()
+        for cron in self.__get_crons():
             cron: Dict
-            if cron.get('active', False):
-                if not self.__create_cron_job(cron):
-                    self.log.error(f'Failed to create cron job for {cron.get("name")}')
-                    return False
+            if not self.__create_cron_job(cron):
+                self.log.error(f'Failed to create cron job for {cron.get("name")}')
+                return False
         return True
 
 
@@ -575,9 +582,19 @@ def main():
     with JobScheduler() as scheduler:
         if not scheduler.set_cron_schedule():
             exit(1)
+        cnt = 0
         while not scheduler.stop_trigger.is_set():
+            if cnt == 60:
+                if scheduler.__get_cron_update_state():
+                    if scheduler.set_cron_schedule():
+                        scheduler.log.info('Updated cron schedule')
+                    else:
+                        scheduler.log.error('Failed to update cron schedule')
+                        exit(1)
+                cnt = 0
             scheduler._crons.run_pending()
             sleep(1)
+            cnt += 1
     exit(0)
 
 

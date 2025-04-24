@@ -19,8 +19,13 @@
   args:
     creates: /etc/docker/host.key
 
+- name: Create node TLS PEM file
+  ansible.builtin.command: "cat /etc/docker/host.crt /etc/docker/host.key > /etc/docker/host.pem"
+  args:
+    creates: /etc/docker/host.pem
+
 - name: Set TLS cert permissions
-  ansible.builtin.command: "chmod 440 /etc/docker/ca.crt /etc/docker/host.crt /etc/docker/host.key"
+  ansible.builtin.command: "chmod 400 /etc/docker/ca.crt /etc/docker/host.*"
   changed_when: true
 
 - name: Set Docker daemon config

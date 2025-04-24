@@ -41,6 +41,7 @@
         "jsonfile",
         "jsonschema",
         "keepalive",
+        "keygen",
         "levelname",
         "lineinfile",
         "mmcblk",

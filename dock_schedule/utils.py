@@ -1,22 +1,182 @@
 import requests
+import json
 from pathlib import Path
 from shutil import copytree, ignore_patterns
 from string import ascii_letters
 from subprocess import run
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from json import dump, loads
 from random import choices, choice
 from logging import Logger
 from ipaddress import ip_address
 from socket import gethostname
-from typing import Dict, Set
+from typing import Dict, Set, List
+from uuid import uuid4
+from urllib.parse import quote_plus
 
 import ansible_runner
 from yaml import safe_load, safe_dump
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, OperationFailure
 
 from dock_schedule.logger import get_logger
 from dock_schedule.cert_auth import CertStore
 from dock_schedule.color import Color
+
+
+class Mongo():
+    def __init__(self, logger: Logger):
+        self.log = logger
+        self.__client: MongoClient | None = None
+        self.__creds = {'user': '', 'passwd': '', 'db': ''}
+
+    @property
+    def __host(self):
+        return "mongodb://%s:%s@mongodb:27017/" % (quote_plus(self.__creds.get('user')),
+                                                   quote_plus(self.__creds.get('passwd')))
+
+    @property
+    def client(self):
+        if self.__client is None:
+            if self.__load_creds():
+                try:
+                    self.__client = MongoClient(
+                        host=self.__host,
+                        tls=True,
+                        tlsCAFile='/etc/docker/ca.crt',
+                        tlsCertificateKeyFile='/etc/docker/host.pem',
+                    )
+                except ConnectionFailure:
+                    self.log.exception('Failed to connect to MongoDB')
+                except Exception:
+                    self.log.exception('Failed to create MongoDB client')
+        return self.__client
+
+    def __load_creds(self):
+        try:
+            with open('', 'r') as file:
+                self.__creds = json.load(file)
+            return True
+        except Exception:
+            self.log.exception('Failed to load mongodb credentials')
+            return False
+
+    def __get_db(self):
+        if self.client:
+            try:
+                return self.client[self.__creds.get('db')]
+            except Exception:
+                self.log.exception('Failed to get database object')
+        return None
+
+    def __get_collection(self, collection_name: str = 'jobs'):
+        db = self.__get_db()
+        if db is not None:
+            try:
+                return db[collection_name]
+            except Exception:
+                self.log.exception(f'Failed to get collection: {collection_name}')
+        return None
+
+    def insert_one(self, collection_name: str, document: dict):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.insert_one(document)
+            except OperationFailure as error:
+                self.log.error(f'Failed to insert document: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to insert document: {document}')
+        return None
+
+    def insert_many(self, collection_name: str, documents: list[dict]):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.insert_many(documents)
+            except OperationFailure as error:
+                self.log.error(f'Failed to insert documents: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to insert documents: {documents}')
+        return None
+
+    def get_one(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.find_one(*filters)
+            except OperationFailure as error:
+                self.log.error(f'Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception('Failed to find data')
+        return None
+
+    def get_all(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return list(collection.find(*filters))
+            except OperationFailure as error:
+                self.log.error(f'Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception('Failed to query collection')
+        return []
+
+    def get_all_with_cursor(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.find(*filters)
+            except OperationFailure as error:
+                self.log.error(f'Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception('Failed to query collection')
+        return None
+
+    def update_one(self, collection_name: str, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.update_one(query, update, upsert=upsert)
+            except OperationFailure as error:
+                self.log.error(f'Failed to update data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to update document: {query}')
+        return None
+
+    def update_many(self, collection_name: str, query: dict, update: dict, upsert: bool = False):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.update_many(query, update, upsert=upsert)
+            except OperationFailure as error:
+                self.log.error(f'Failed to update data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to update documents: {query}')
+        return None
+
+    def delete_one(self, collection_name: str, query: dict) -> bool:
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                collection.delete_one(query)
+                return True
+            except OperationFailure as error:
+                self.log.error(f'Failed to delete data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to delete document: {query}')
+        return False
+
+    def delete_many(self, collection_name: str, query: dict) -> bool:
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                collection.delete_many(query)
+                return True
+            except OperationFailure as error:
+                self.log.error(f'Failed to delete data: {error.details}')
+            except Exception:
+                self.log.exception(f'Failed to delete documents: {query}')
+        return False
 
 
 class Utils():
@@ -24,11 +184,15 @@ class Utils():
         self.log = logger or get_logger('dock-schedule')
 
     @property
+    def ansible_private_key(self):
+        return '/opt/dock-schedule/ansible/.env/.ansible_rsa'
+
+    @property
     def ansible_env_vars(self):
         return {
             'ANSIBLE_CONFIG': '/opt/dock-schedule/ansible/ansible.cfg',
             'ANSIBLE_PYTHON_INTERPRETER': '/usr/bin/python3',
-            'ANSIBLE_PRIVATE_KEY_FILE': '/opt/dock-schedule/.env/.ansible_rsa',
+            'ANSIBLE_PRIVATE_KEY_FILE': self.ansible_private_key,
         }
 
     @property
@@ -82,10 +246,6 @@ class Utils():
         if log_output:
             self.log.info(f'Command: {cmd}\nOutput: {stdout}')
         return stdout, state, error
-
-    def create_docker_swarm(self):
-        self.log.info('Creating docker swarm')
-        return self.run_ansible_playbook('create_swarm.yml', self.localhost_inventory)
 
     def set_workers(self, worker_qty: int = 1):
         return self._run_cmd(f'docker service scale dock-schedule_worker={worker_qty}')[1]
@@ -189,7 +349,7 @@ class Swarm(Utils):
         if rsp[1]:
             for line in rsp[0].splitlines():
                 try:
-                    yield loads(line.strip())
+                    yield json.loads(line.strip())
                 except Exception:
                     self.log.exception('Failed to parse JSON')
 
@@ -448,7 +608,7 @@ class Services(Swarm):
         if rsp[1]:
             for line in rsp[0].splitlines():
                 try:
-                    yield loads(line.strip())
+                    yield json.loads(line.strip())
                 except Exception:
                     self.log.exception('Failed to parse JSON')
 
@@ -469,6 +629,82 @@ class Services(Swarm):
                 color.print_message(f'  {name}:{version} {replicas}', 'red')
         color.print_message(f'Total containers: {containers}', 'magenta')
         return True
+
+
+class Schedule(Swarm):
+    def __inti__(self, logger: Logger = None):
+        super().__init__(logger)
+
+    @property
+    def schedule_file(self):
+        return '/opt/dock-schedule/jobs/crons.json'
+
+    def get_job_schedule(self) -> List | None:
+        try:
+            with open(self.schedule_file, 'r') as file:
+                return json.load(file)
+        except Exception:
+            self.log.exception('Failed to load job schedule data')
+            return None
+
+    def save_job_schedule(self, data: List) -> bool:
+        try:
+            with open(self.schedule_file, 'w') as file:
+                json.dump(data, file, indent=2)
+                file.write('\n')
+            return True
+        except Exception:
+            self.log.exception('Failed to save job schedule data')
+        return False
+
+    def display_job_schedule(self):
+        schedule = self.get_job_schedule()
+        if schedule is not None:
+            return self._display_info('Job Schedule:\n' + json.dumps(schedule, indent=2))
+        return False
+
+    def __check_job_run_file_exists(self, job: Dict) -> bool:
+        job_type = job.get('type')
+        if job_type == 'ansible':
+            job_file = f'/opt/dock-schedule/ansible/playbooks/{job.get("run")}'
+        else:
+            job_file = f'/opt/dock-schedule/jobs/{job_type}/{job.get("run")}'
+        if not Path(job_file).exists():
+            self.log.error(f'Job run file does not exist: {job_file}')
+            return False
+        return True
+
+    def create_job_cron(self, job: Dict) -> bool:
+        """Create a job cron
+
+        Args:
+            job (Dict): Job data used to create the cron job
+                name:
+                type:
+                run:
+                args:
+                frequency:
+                interval:
+                at:
+                timezone:
+                hostInventory:
+                extraVars:
+                disabled:
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        # ToDo: parse the hostInventory and extraVars into a dict or list
+        if self.__check_job_run_file_exists(job):
+            job['_id'] = str(uuid4())
+            schedule = self.get_job_schedule()
+            if schedule is not None:
+                schedule.append(job)
+                if self.save_job_schedule(schedule):
+                    self.log.info(f'Job {job.get("name")} created successfully')
+                    return True
+        self.log.error(f'Failed to create job {job.get("name")}')
+        return False
 
 
 class Init(Utils):
@@ -506,8 +742,8 @@ class Init(Utils):
 
     def __create_swarm_dir_tree(self):
         self.log.info('Creating swarm directory tree')
-        for path in ['ansible/playbooks', 'broker/data', 'grafana/data', 'jobs', 'mongodb/data', 'prometheus/data',
-                     'certs']:
+        for path in ['ansible/playbooks', 'ansible/.env', 'broker/data', 'grafana/data', 'jobs', 'mongodb/data',
+                     'prometheus/data', 'certs']:
             try:
                 Path('/opt/dock-schedule/' + path).mkdir(parents=True, exist_ok=True)
             except Exception:
@@ -587,7 +823,7 @@ class Init(Utils):
         subject = self.__fill_subject_randoms(subject)
         try:
             with open(file, 'w') as file:
-                dump(subject, file, indent=2)
+                json.dump(subject, file, indent=2)
                 file.write('\n')
             return True
         except Exception:
@@ -624,17 +860,41 @@ class Init(Utils):
                 return self._set_cert_permissions()
         return False
 
-    def __create_proxy_hosts_entry(self):
+    def __create_hosts_entry(self):
         try:
             with open('/etc/hosts', 'a+') as file:
-                file.write('\n127.0.0.1  proxy')
+                file.write('\n127.0.0.1  proxy\n127.0.0.1  mongodb\n')
+            return True
         except Exception:
             self.log.exception('Failed to create /etc/hosts entry for proxy service')
             return False
 
+    def __create_ansible_keys(self):
+        self.log.info('Creating ansible keys')
+        return self._run_cmd(f'ssh-keygen -t rsa -b 4096 -f {self.ansible_private_key} -N ""')[1] and \
+            self._run_cmd(f'chmod 400 {self.ansible_private_key}')[1]
+
+    def __create_mongo_credentials(self):
+        creds = {'user': 'dsu-' + choices(ascii_letters, k=8),
+                 'passwd': choices(ascii_letters, k=32),
+                 'db': 'dsdb-' + choices(ascii_letters, k=8)}
+        try:
+            with open('/opt/dock-schedule/.mongo', 'w') as file:
+                json.dump(creds, file)
+        except Exception:
+            self.log.exception('Failed to create mongo credentials file')
+            return False
+        return self._run_cmd('chown root:root /opt/dock-schedule/.mongo')[1] and \
+            self._run_cmd('chmod 440 /opt/dock-schedule/.mongo')[1]
+
+    def __create_docker_swarm(self):
+        self.log.info('Creating docker swarm')
+        return self.run_ansible_playbook('create_swarm.yml', self.localhost_inventory)
+
     def _run(self):
         for method in [self.__create_service_users, self.__create_swarm_dir_tree, self.__init_cert_store,
-                       self.__create_proxy_hosts_entry, self.create_docker_swarm]:
+                       self.__create_hosts_entry, self.__create_ansible_keys,
+                       self.__create_mongo_credentials, self.__create_docker_swarm]:
             if not method():
                 return False
         self.log.info('Successfully initialized dock-schedule')
