@@ -60,7 +60,7 @@ def parent():
 
 def parse_init_args(args: dict):
     if args.get('run'):
-        return Init(args['force'])._run()
+        return Init(args['force'], args['nonInteractive'])._run()
     return True
 
 
@@ -74,6 +74,11 @@ def init(parent_args: list = None):
         'force': {
             'short': 'F',
             'help': 'Force operations',
+            'action': 'store_true'
+        },
+        'nonInteractive': {
+            'short': 'N',
+            'help': 'Run in non-interactive mode',
             'action': 'store_true'
         },
     }).set_arguments()

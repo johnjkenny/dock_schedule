@@ -39,3 +39,24 @@
     permanent: true
     state: enabled
     immediate: true
+
+- name: Open HTTP Port (80/tcp)
+  ansible.posix.firewalld:
+    port: 80/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+
+- name: Open HTTPS Port (443/tcp)
+  ansible.posix.firewalld:
+    port: 443/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+
+- name: Open Prometheus Port (8080/tcp)
+  ansible.posix.firewalld:
+    port: 8080/tcp
+    permanent: true
+    state: enabled
+    immediate: true
