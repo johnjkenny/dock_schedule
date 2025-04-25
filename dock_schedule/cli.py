@@ -234,41 +234,48 @@ def containers(parent_args: list = None):
 
 
 def parse_job_args(args: dict):
-    if args.get('schedule'):
-        return Schedule().display_job_schedule()
+    if args.get('list'):
+        return Schedule().display_all_job_schedules()
     if args.get('create'):
         return create_job(args['create'])
+    if args.get('delete'):
+        return Schedule().delete_cron_job(args['delete'])
+    if args.get('update'):
+        return update_job(args['update'])
+    if args.get('get'):
+        return get_job_schedule(args['get'])
     return True
 
 
 def jobs(parent_args: list = None):
     args = ArgParser('Dock Schedule: Jobs', parent_args, {
-        'schedule': {
-            'short': 's',
-            'help': 'Get dock-schedule job schedule',
+        'list': {
+            'short': 'l',
+            'help': 'List dock-schedule job schedule',
             'action': 'store_true'
+        },
+        'get': {
+            'short': 'g',
+            'help': 'Get dock-schedule job schedule (specify job name)',
+            'nargs': REMAINDER
         },
         'create': {
             'short': 'c',
-            'help': 'Create a dock-schedule job schedule',
+            'help': 'Create a dock-schedule job cron',
             'nargs': REMAINDER
         },
         'delete': {
             'short': 'D',
-            'help': 'Delete a dock-schedule job schedule',
+            'help': 'Delete a dock-schedule job cron (specify job ID)',
         },
         'update': {
             'short': 'u',
-            'help': 'Update a dock-schedule job schedule',
+            'help': 'Update a dock-schedule job cron',
+            'nargs': REMAINDER
         },
         'run': {
             'short': 'r',
             'help': 'Run a dock-schedule job (specify job name)',
-        },
-        'args': {
-            'short': 'a',
-            'help': 'Get dock-schedule job arguments',
-            'nargs': '+'
         },
     }).set_arguments()
     if not parse_job_args(args):
@@ -278,7 +285,7 @@ def jobs(parent_args: list = None):
 
 def parse_create_job_args(args: dict):
     if args.get('name'):
-        return Schedule().create_job_cron(args)
+        return Schedule().create_cron_job(args)
     return True
 
 
@@ -293,12 +300,14 @@ def create_job(parent_args: list = None):
             'short': 't',
             'help': 'Type of the job to create. Options: python3, ansible, bash, php, node',
             'choices': ['python3', 'ansible', 'bash', 'php', 'node'],
+            'required': True,
         },
         'run': {
             'short': 'r',
             'help': 'Name of script or playbook to run for the job. This should be located: \
                 /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or node type. \
                 /opt/dock-schedule/ansible/playbooks/<run> for ansible type',
+            'required': True,
         },
         'args': {
             'short': 'a',
@@ -310,6 +319,7 @@ def create_job(parent_args: list = None):
             'short': 'f',
             'help': 'Frequency to run the job. Options: second, minute, hour, day',
             'choices': ['second', 'minute', 'hour', 'day'],
+            'required': True,
         },
         'interval': {
             'short': 'i',
@@ -336,8 +346,8 @@ def create_job(parent_args: list = None):
         },
         'hostInventory': {
             'short': 'H',
-            'help': 'Host inventory to run remote ansible job on. Requires key=value pairs: \
-                "name=hostname, ip=ipaddress". Leave empty for the ansible job to run locally on the worker'
+            'help': 'Host inventory to run remote ansible job on. Requires key=value pairs separated by comma: \
+                "hostname1=ip1, hostname2=ip2". Leave empty for the ansible job to run locally on the worker'
         },
         'extraVars': {
             'short': 'e',
@@ -355,18 +365,134 @@ def create_job(parent_args: list = None):
     exit(0)
 
 
-'''
-{
-    "name": "job_name",
-    "script_type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
-    "script_name": "job_name.py",  # the name of the script to run
-    "script_args": [],  # arguments to pass to the script
-    "frequency": "minute",  # second, minute, hour, day
-    "at": "00:00",  # time to run the job
-    "interval": 1,  # interval to run the job
-    "timezone": "UTC",  # timezone to run the job
-    "inventory": {}  # or leave empty for localhost
-    "extra_vars": {},  # extra vars for ansible jobs
-    'active': True  # if the job is active or not
-}
-'''
+def parse_update_job_args(args: dict):
+    if args.get('jobID'):
+        job_id = args.pop('jobID')
+        return Schedule().update_cron_job(job_id, args)
+    return True
+
+
+def update_job(parent_args: list = None):
+    args = ArgParser('Dock Schedule: Update Job Cron', parent_args, {
+        'jobID': {
+            'short': 'j',
+            'help': 'Job ID of the job to update. Required to update a job cron',
+            'required': True,
+        },
+        'name': {
+            'short': 'n',
+            'help': 'New name for the cron job',
+            'default': None,
+        },
+        'type': {
+            'short': 't',
+            'help': 'Job type update. Options: python3, ansible, bash, php, node',
+            'choices': ['python3', 'ansible', 'bash', 'php', 'node', None],
+            'default': None,
+        },
+        'run': {
+            'short': 'r',
+            'help': 'Job file to run. This should be located: \
+                /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or node type. \
+                /opt/dock-schedule/ansible/playbooks/<run> for ansible type',
+            'default': None,
+        },
+        'args': {
+            'short': 'a',
+            'help': 'Arguments to pass to the python3, bash, php or node script arg parser \
+                (example: "--arg1 value1", "--arg2 value2"). Include all args and not just the updated ones. \
+                    Use "NONE" to remove all args.',
+            'nargs': '+',
+            'default': None
+        },
+        'frequency': {
+            'short': 'f',
+            'help': 'Frequency to run the job. Options: second, minute, hour, day',
+            'choices': ['second', 'minute', 'hour', 'day', None],
+            'default': None,
+        },
+        'interval': {
+            'short': 'i',
+            'help': 'Interval to run the job based on the frequency. Must set either interval or at, but not both. \
+                "at" will take precedence. Options: \
+                second frequency: 1-infinity, \
+                minute frequency: 1-infinity, \
+                hour frequency: 1-infinity, \
+                day frequency: 1-infinity. Use "None" to remove.',
+            'default': None,
+        },
+        'at': {
+            'short': 'A',
+            'help': 'The time to run the job based on the frequency. Must set either interval or at, but not both. \
+                "at" will take precedence. Options: \
+                minute frequency: ":SS", \
+                hour frequency: "MM:SS" or ":MM", \
+                day frequency: "HH:MM:SS" or "HH:MM". Use "None" to remove.',
+            'default': None,
+        },
+        'timezone': {
+            'short': 'T',
+            'help': 'Timezone to run the job. Used in junction with "at"',
+            'default': None
+        },
+        'hostInventory': {
+            'short': 'H',
+            'help': 'Host inventory to run remote ansible job on. Requires key=value pairs separated by comma: \
+                "hostname1=ip1, hostname2=ip2". Use "None" to remove and use localhost.',
+            'default': None
+        },
+        'extraVars': {
+            'short': 'e',
+            'help': 'Extra vars to pass to the ansible job. Requires key=value pairs separated by comma. \
+                "var1=value1, var2=value2". Include all expected key values and not just the updated ones',
+            'default': None
+        },
+        'state': {
+            'short': 's',
+            'help': 'State of the cron job. Options: enabled, disabled',
+            'choices': ['enabled', 'disabled', None],
+            'default': None
+        }
+    }).set_arguments()
+    if not parse_update_job_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_get_job_schedule_args(args: dict):
+    if args.get('id'):
+        return Schedule().display_job_schedule(job_id=args['id'])
+    if args.get('name'):
+        return Schedule().display_job_schedule(job_name=args['name'])
+    if args.get('type'):
+        return Schedule().display_job_schedule(job_type=args['type'])
+    if args.get('run'):
+        return Schedule().display_job_schedule(job_run=args['run'])
+    return True
+
+
+def get_job_schedule(parent_args: list = None):
+    args = ArgParser('Dock Schedule: Get Job Schedule', parent_args, {
+        'id': {
+            'short': 'i',
+            'help': 'Get job schedule by job ID',
+        },
+        'name': {
+            'short': 'n',
+            'help': 'Get job schedule by job name',
+        },
+        'type': {
+            'short': 't',
+            'help': 'Get job schedule by job type',
+            'choices': ['python3', 'ansible', 'bash', 'php', 'node'],
+        },
+        'run': {
+            'short': 'r',
+            'help': 'Get job schedule by job file to run. This should be located: \
+                /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or node type. \
+                /opt/dock-schedule/ansible/playbooks/<run> for ansible type',
+        }
+    }).set_arguments()
+    if not parse_get_job_schedule_args(args):
+        exit(1)
+    exit(0)
