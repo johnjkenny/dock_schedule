@@ -26,7 +26,7 @@ try {
   db.jobs.createIndex({"expiryTime": 1}, {expireAfterSeconds: 0});
 
   db.createCollection("cronUpdate");
-  db.jobsUpdate.insertOne({_id: 1, update: false});
+  db.cronUpdate.insertOne({_id: 1, update: false});
 
   db.createCollection("crons");
   db.crons.createIndex({"name": 1});

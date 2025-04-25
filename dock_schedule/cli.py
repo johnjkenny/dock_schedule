@@ -1,7 +1,9 @@
 from argparse import REMAINDER
 
 from dock_schedule.arg_parser import ArgParser
-from dock_schedule.utils import Init, Utils, Swarm, Services, Schedule
+from dock_schedule.utils import Utils, Schedule
+from dock_schedule.init import Init
+from dock_schedule.swarm import Swarm, Services
 
 
 def parse_parent_args(args: dict):

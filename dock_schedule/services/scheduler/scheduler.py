@@ -534,7 +534,7 @@ class JobScheduler():
     def __get_crons(self):
         return self.__db.get_all('crons', {'disabled': False})
 
-    def __get_cron_update_state(self):
+    def get_cron_update_state(self):
         state: dict = self.__db.get_one('cronUpdate', {'_id': 1})
         if state:
             if state.get('update', False):
@@ -585,7 +585,7 @@ def main():
         cnt = 0
         while not scheduler.stop_trigger.is_set():
             if cnt == 60:
-                if scheduler.__get_cron_update_state():
+                if scheduler.get_cron_update_state():
                     if scheduler.set_cron_schedule():
                         scheduler.log.info('Updated cron schedule')
                     else:
@@ -603,113 +603,10 @@ if __name__ == "__main__":
 
 
 '''
-cron job example:
-{
-    "name": "job_name",
-    "script_type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
-    "script_name": "job_name.py",  # the name of the script to run
-    "script_args": [],  # arguments to pass to the script
-    "frequency": "minute",  # second, minute, hour, day
-    "at": "00:00",  # time to run the job
-    "interval": 1,  # interval to run the job
-    "timezone": "UTC",  # timezone to run the job
-    "inventory": {}  # or leave empty for localhost
-    "extra_vars": {},  # extra vars for ansible jobs
-    'active': True  # if the job is active or not
-}
-
-test case
-create a series of different jobs that the workers can run
-send the jobs to workers based on a cron schedule
-
-Job Request example:
-{
-    "_id": "job_id",
-    "inventory": {},  # or leave empty for localhost
-    "type": "python3",  # what runs the job- python3, ansible, bash, php, javascript, etc.
-    "name": "job_name",
-    "args": [],
-    "extra_vars": {}  # extra vars for ansible jobs
-}
-
 inventory = [
     {
         'name': 'node1',
         'ip': 'ip'
     }
 ]
-
-jobs are listed by type:
-    - python3
-    - ansible
-    - bash
-    - php
-    - javascript
-
-[
-    {
-        "name": "Test Job Successful",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["0"],
-        "frequency": "second",
-        "interval": 1,
-        "active": true
-    },
-    {
-        "name": "Test Job Successful",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["0"],
-        "frequency": "second",
-        "interval": 1,
-        "active": true
-    },
-    {
-        "name": "Test Job Successful",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["0"],
-        "frequency": "second",
-        "interval": 1,
-        "active": true
-    },
-    {
-        "name": "Test Job Successful",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["0"],
-        "frequency": "second",
-        "interval": 1,
-        "active": true
-    },
-    {
-        "name": "Test Job Successful",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["0"],
-        "frequency": "second",
-        "interval": 1,
-        "active": true
-    },
-    {
-        "name": "Test Job Successful",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["0"],
-        "frequency": "second",
-        "interval": 1,
-        "active": true
-    },
-    {
-        "name": "Test Job Fail",
-        "script_type": "python3",
-        "script_name": "test.py",
-        "script_args": ["1"],
-        "frequency": "minute",
-        "interval": 1,
-        "active": true
-    }
-]
-
 '''

@@ -81,32 +81,29 @@ pip install -e .
 ```bash
 # Command Options:
 dschedule -I -h
-usage: dschedule [-h] [-r] [-F]
+usage: dschedule [-h] [-r] [-F] [-N]
 
-Dock Schedule Initialization
+Dock Schedule: Initialization
 
 options:
-  -h, --help   show this help message and exit
+  -h, --help            show this help message and exit
 
-  -r, --run    Run initialization
+  -r, --run             Run initialization
 
-  -F, --force  Force operations
+  -F, --force           Force operations
+
+  -N, --nonInteractive  Run in non-interactive mode
 
 
 # run initialization:
-dschedule -I -r
-[2025-04-23 21:19:43,079][INFO][utils,484]: Creating service users
-[2025-04-23 21:19:43,088][INFO][utils,508]: Creating swarm directory tree
-[2025-04-23 21:19:43,110][INFO][utils,544]: Creating dock-schedule directory tree
-[2025-04-23 21:20:19,252][INFO][utils,554]: Initializing certificate store
-CA Country Name (2 letter code) [Random]: 
-CA State or Province Name [Random]: 
-CA Locality Name (city) [Random]: 
-CA Organization Name (eg, company) [Random]: 
-CA Organizational Unit Name (eg, section) [Random]: 
-CA email [Random]: 
-[2025-04-23 21:20:28,944][INFO][utils,619]: Generating SSL certificates for swarm manager
-[2025-04-23 21:20:29,450][INFO][utils,87]: Creating docker swarm
+dschedule -I -r -N
+[2025-04-25 14:56:59,086][INFO][utils,723]: Creating service users
+[2025-04-25 14:56:59,434][INFO][utils,747]: Creating swarm directory tree
+[2025-04-25 14:56:59,455][INFO][utils,783]: Creating dock-schedule directory tree
+[2025-04-25 14:57:25,780][INFO][utils,793]: Initializing certificate store
+[2025-04-25 14:57:32,067][INFO][utils,857]: Generating SSL certificates for swarm manager
+[2025-04-25 14:57:32,448][INFO][utils,875]: Creating ansible keys
+[2025-04-25 14:57:33,054][INFO][utils,899]: Creating docker swarm
 
 PLAY [Create Docker Swarm] *****************************************************
 
@@ -152,6 +149,9 @@ changed: [localhost]
 TASK [Copy node TLS key to Docker directory] ***********************************
 changed: [localhost]
 
+TASK [Create node TLS PEM file] ************************************************
+changed: [localhost]
+
 TASK [Set TLS cert permissions] ************************************************
 changed: [localhost]
 
@@ -173,22 +173,10 @@ changed: [localhost]
 TASK [Create Job DB Network] ***************************************************
 changed: [localhost]
 
-TASK [Create Broker User Secret] ***********************************************
+TASK [Create Broker Secrets] ***************************************************
 changed: [localhost]
 
-TASK [Create Broker Password Secret] *******************************************
-changed: [localhost]
-
-TASK [Create Broker Vhost Secret] **********************************************
-changed: [localhost]
-
-TASK [Create Mongo User Secret] ************************************************
-changed: [localhost]
-
-TASK [Create Mongo Password Secret] ********************************************
-changed: [localhost]
-
-TASK [Create Mongo DB Secret] **************************************************
+TASK [Create Mong Secrets] *****************************************************
 changed: [localhost]
 
 TASK [Install Firewalld] *******************************************************
@@ -210,6 +198,15 @@ changed: [localhost]
 TASK [Open NFS port (2049/tcp)] ************************************************
 changed: [localhost]
 
+TASK [Open HTTP Port (80/tcp)] *************************************************
+changed: [localhost]
+
+TASK [Open HTTPS Port (443/tcp)] ***********************************************
+changed: [localhost]
+
+TASK [Open Prometheus Port (8080/tcp)] *****************************************
+changed: [localhost]
+
 TASK [Build docker images] *****************************************************
 changed: [localhost]
 
@@ -218,7 +215,7 @@ changed: [localhost]
 
 PLAY RECAP *********************************************************************
 localhost                  : ok=35   changed=28   unreachable=0    failed=0    skipped=4    rescued=0    ignored=0   
-[2025-04-23 21:24:50,253][INFO][utils,641]: Successfully initialized dock-schedule
+[2025-04-25 15:03:22,277][INFO][utils,908]: Successfully initialized dock-schedule
 ```
 
 
