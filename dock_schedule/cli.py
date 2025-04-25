@@ -350,7 +350,7 @@ def create_job(parent_args: list = None):
             'action': 'store_true',
         }
     }).set_arguments()
-    if not parse_job_args(args):
+    if not parse_create_job_args(args):
         exit(1)
     exit(0)
 

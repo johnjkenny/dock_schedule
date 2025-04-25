@@ -45,7 +45,7 @@ class Mongo():
 
     def __load_creds(self):
         try:
-            with open('', 'r') as file:
+            with open('/opt/dock-schedule/.mongo', 'r') as file:
                 self.__creds = json.load(file)
             return True
         except Exception:
@@ -256,30 +256,12 @@ class Utils():
 
 
 class Schedule(Utils):
-    def __inti__(self, logger: Logger = None):
+    def __init__(self, logger: Logger = None):
         super().__init__(logger)
+        self.__db = Mongo(self.log)
 
-    @property
-    def schedule_file(self):
-        return '/opt/dock-schedule/jobs/crons.json'
-
-    def get_job_schedule(self) -> List | None:
-        try:
-            with open(self.schedule_file, 'r') as file:
-                return json.load(file)
-        except Exception:
-            self.log.exception('Failed to load job schedule data')
-            return None
-
-    def save_job_schedule(self, data: List) -> bool:
-        try:
-            with open(self.schedule_file, 'w') as file:
-                json.dump(data, file, indent=2)
-                file.write('\n')
-            return True
-        except Exception:
-            self.log.exception('Failed to save job schedule data')
-        return False
+    def get_job_schedule(self) -> List[Dict] | None:
+        return self.__db.get_all('crons')
 
     def display_job_schedule(self):
         schedule = self.get_job_schedule()
@@ -298,22 +280,38 @@ class Schedule(Utils):
             return False
         return True
 
+    def __set_update_flag(self):
+        if not self.__db.update_one('cronUpdate', {'_id': 1}, {'$set': {'update': True}}):
+            self.log.error('Failed to set update flag')
+            return False
+        return True
+
     def create_job_cron(self, job: Dict) -> bool:
         """Create a job cron
 
         Args:
             job (Dict): Job data used to create the cron job
-                name:
-                type:
-                run:
-                args:
-                frequency:
-                interval:
-                at:
-                timezone:
-                hostInventory:
-                extraVars:
-                disabled:
+                name: name of the job
+
+                type: type of the job (ansible, python3, bash, php, node)
+
+                run: name of the job run file (ansible playbook name or script type file name)
+
+                args: arguments to pass to non ansible job types
+
+                frequency: frequency of the job (second, minute, hour, day)
+
+                interval: frequency interval (1, 2, 3, etc)
+
+                at: time to run the job (HH:MM:SS)
+
+                timezone: timezone to run the job (UTC, EST, PST, etc)
+
+                hostInventory: host inventory to run the job on (ansible inventory)
+
+                extraVars: extra variables to pass to the job (ansible extra vars)
+
+                disabled: disable the job (True, False)
 
         Returns:
             bool: True if successful, False otherwise
@@ -321,11 +319,8 @@ class Schedule(Utils):
         # ToDo: parse the hostInventory and extraVars into a dict or list
         if self.__check_job_run_file_exists(job):
             job['_id'] = str(uuid4())
-            schedule = self.get_job_schedule()
-            if schedule is not None:
-                schedule.append(job)
-                if self.save_job_schedule(schedule):
-                    self.log.info(f'Job {job.get("name")} created successfully')
-                    return True
+            if self.__db.insert_one('crons', job):
+                self.log.info(f'Job {job.get("name")} created successfully')
+                return self.__set_update_flag()
         self.log.error(f'Failed to create job {job.get("name")}')
         return False
