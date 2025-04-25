@@ -5,7 +5,7 @@ import logging
 from time import sleep, gmtime
 from threading import Thread, Event
 from json import loads
-from typing import Dict, List
+from typing import Dict
 from tempfile import TemporaryDirectory
 from urllib.parse import quote_plus
 
@@ -437,23 +437,12 @@ class Worker():
             'ANSIBLE_PRIVATE_KEY_FILE': '/app/ansible/.env/.ansible_rsa',
         }
 
-    def __parse_host_inventory(self, inventory: Dict | List | None) -> Dict:
+    def __parse_host_inventory(self, inventory: Dict | None) -> Dict:
         if inventory:
             if isinstance(inventory, dict):
-                return {'all': {'hosts': {inventory.get('name', 'localhost'): {'ansible_host':
-                        inventory.get('ip', '127.0.0.1')}}}}
-            elif isinstance(inventory, list):
                 __inventory = {'all': {'hosts': {}}}
-                for host in inventory:
-                    if not isinstance(host, dict):
-                        self.log.error(f'Invalid host format: {type(host)}')
-                        return {}
-                    name = host.get('name')
-                    ip = host.get('ip')
-                    if not name or not ip:
-                        self.log.error(f"Host entry missing 'name' or 'ip': {host}")
-                        return {}
-                    __inventory['all']['hosts'][name] = {'ansible_host': ip}
+                for host, ip in inventory.items():
+                    __inventory['all']['hosts'][host] = {'ansible_host': ip}
                 return __inventory
             else:
                 self.log.error(f'Invalid inventory type: {type(inventory)}')

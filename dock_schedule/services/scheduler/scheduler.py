@@ -584,6 +584,7 @@ def main():
             exit(1)
         cnt = 0
         while not scheduler.stop_trigger.is_set():
+            scheduler._crons.run_pending()
             if cnt == 60:
                 if scheduler.get_cron_update_state():
                     if scheduler.set_cron_schedule():
@@ -592,7 +593,6 @@ def main():
                         scheduler.log.error('Failed to update cron schedule')
                         exit(1)
                 cnt = 0
-            scheduler._crons.run_pending()
             sleep(1)
             cnt += 1
     exit(0)
