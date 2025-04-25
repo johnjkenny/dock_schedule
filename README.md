@@ -31,8 +31,8 @@ worker demand.
 
 # Initialization
 The idea is to have a VM or physical server as the initial swarm manager node. Clone the repository to the server you
-wish to use as the primary swam cluster node. A 2 CPU, 2GB RAM server is sufficient for the initial deployment with
-low work load. Scale up the cluster as needed.
+wish to use as the primary swam cluster node. A 2 CPU, 2GB RAM server with 20GB storage is sufficient for the initial
+deployment with low work load. Scale up the cluster as needed.
 
 The initialization process creates the directory `/opt/dock-schedule` on the swarm manager node. The service, job, and
 configuration files are copied from the git repository clone to this directory tree. The init process creates the

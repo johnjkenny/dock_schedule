@@ -708,9 +708,12 @@ class Schedule(Swarm):
 
 
 class Init(Utils):
-    def __init__(self, force: bool = False, logger: Logger = None):
+    def __init__(self, force: bool = False, non_interactive: bool = False, logger: Logger = None):
         super().__init__(logger)
         self.__force = force
+        self.__non_interactive = non_interactive
+        self.__subject = {'country': 'Random', 'state': 'Random', 'city': 'Random', 'company': 'Random',
+                          'department': 'Random',  'email': 'Random'}
 
     @property
     def certs(self):
@@ -793,16 +796,15 @@ class Init(Utils):
                 return self.__generate_swarm_manager_ssl_certs()
         return False
 
-    def __fill_subject_randoms(self, subject: dict) -> dict:
-        for key, value in subject.items():
+    def __fill_subject_randoms(self):
+        for key, value in self.__subject.items():
             if value == 'Random':
                 if key == 'country':
-                    subject[key] = ''.join(choices(ascii_letters, k=2))
+                    self.__subject[key] = ''.join(choices(ascii_letters, k=2))
                 elif key == 'email':
-                    subject[key] = ''.join(choices(ascii_letters, k=choice(range(10, 20)))) + '@random.com'
+                    self.__subject[key] = ''.join(choices(ascii_letters, k=choice(range(10, 20)))) + '@random.com'
                 else:
-                    subject[key] = ''.join(choices(ascii_letters, k=choice(range(10, 20))))
-        return subject
+                    self.__subject[key] = ''.join(choices(ascii_letters, k=choice(range(10, 20))))
 
     def __create_cert_subject(self) -> bool:
         """Create the CA subject file if it does not exist or force is set
@@ -813,17 +815,17 @@ class Init(Utils):
         file = Path('/opt/dock-schedule/certs/.ca-subject')
         if file.exists() and not self.__force:
             return True
-        subject = {}
-        subject['country'] = input('CA Country Name (2 letter code) [Random]: ') or 'Random'
-        subject['state'] = input('CA State or Province Name [Random]: ') or 'Random'
-        subject['city'] = input('CA Locality Name (city) [Random]: ') or 'Random'
-        subject['company'] = input('CA Organization Name (eg, company) [Random]: ') or 'Random'
-        subject['department'] = input('CA Organizational Unit Name (eg, section) [Random]: ') or 'Random'
-        subject['email'] = input('CA email [Random]: ') or 'Random'
-        subject = self.__fill_subject_randoms(subject)
+        if not self.__non_interactive:
+            self.__subject['country'] = input('CA Country Name (2 letter code) [Random]: ') or 'Random'
+            self.__subject['state'] = input('CA State or Province Name [Random]: ') or 'Random'
+            self.__subject['city'] = input('CA Locality Name (city) [Random]: ') or 'Random'
+            self.__subject['company'] = input('CA Organization Name (eg, company) [Random]: ') or 'Random'
+            self.__subject['department'] = input('CA Organizational Unit Name (eg, section) [Random]: ') or 'Random'
+            self.__subject['email'] = input('CA email [Random]: ') or 'Random'
+        self.__fill_subject_randoms()
         try:
             with open(file, 'w') as file:
-                json.dump(subject, file, indent=2)
+                json.dump(self.__subject, file, indent=2)
                 file.write('\n')
             return True
         except Exception:
@@ -871,13 +873,19 @@ class Init(Utils):
 
     def __create_ansible_keys(self):
         self.log.info('Creating ansible keys')
+        if Path(self.ansible_private_key).exists():
+            if not self.__force:
+                self.log.info('Ansible keys already exist')
+                return True
+            if not self._run_cmd(f'rm -f {self.ansible_private_key}')[1]:
+                return False
         return self._run_cmd(f'ssh-keygen -t rsa -b 4096 -f {self.ansible_private_key} -N ""')[1] and \
             self._run_cmd(f'chmod 400 {self.ansible_private_key}')[1]
 
     def __create_mongo_credentials(self):
-        creds = {'user': 'dsu-' + choices(ascii_letters, k=8),
-                 'passwd': choices(ascii_letters, k=32),
-                 'db': 'dsdb-' + choices(ascii_letters, k=8)}
+        creds = {'user': 'dsu-' + ''.join(choices(ascii_letters, k=8)),
+                 'passwd': ''.join(choices(ascii_letters, k=32)),
+                 'db': 'dsdb-' + ''.join(choices(ascii_letters, k=8))}
         try:
             with open('/opt/dock-schedule/.mongo', 'w') as file:
                 json.dump(creds, file)
