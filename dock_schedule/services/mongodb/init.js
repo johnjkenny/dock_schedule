@@ -28,6 +28,10 @@ try {
   db.createCollection("cronUpdate");
   db.cronUpdate.insertOne({_id: 1, update: false});
 
+  db.createCollection("scheduledJob");
+  db.scheduledJob.createIndex({"state": 1});
+  db.scheduledJob.createIndex({"expiryTime": 1}, {expireAfterSeconds: 0});
+
   db.createCollection("crons");
   db.crons.createIndex({"name": 1});
   db.crons.createIndex({"disabled": 1});

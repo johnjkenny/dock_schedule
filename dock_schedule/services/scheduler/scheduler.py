@@ -546,11 +546,19 @@ class JobScheduler():
             self.log.error('Failed to get cron update state')
         return False
 
+    def get_scheduled_run_now_jobs(self):
+        jobs = self.__db.get_all('scheduledJob', {'state': 'pending'})
+        if jobs:
+            for job in jobs:
+                if not self._run_cron(job):
+                    self.log.error(f'Failed to schedule job {job.get("name")}')
+                if not self.__db.update_one('scheduledJob', {'_id': job.get('_id')}, {'$set': {'state': 'done'}}):
+                    self.log.error(f'Failed to update job {job.get("name")} schedule state to done')
+
     def _run_cron(self, cron: Dict):
         try:
-            job_id = str(uuid4())
             job = {
-                '_id': job_id,
+                '_id': cron.get('_id') or str(uuid4()),
                 'name': cron.get('name', ''),
                 'type': cron.get('type'),
                 'run': cron.get('run', ''),
@@ -561,7 +569,7 @@ class JobScheduler():
                 'result': None,
                 'error': None,
             }
-            self.__publisher.send_msg(dumps(job).encode(), job_id)
+            self.__publisher.send_msg(dumps(job).encode(), job.get('_id'))
             job['expiryTime'] = datetime.now() + timedelta(days=7)
         except Exception:
             self.log.exception('Failed to send job to broker')
@@ -585,6 +593,8 @@ def main():
         cnt = 0
         while not scheduler.stop_trigger.is_set():
             scheduler._crons.run_pending()
+            if cnt % 5 == 0:
+                scheduler.get_scheduled_run_now_jobs()
             if cnt == 60:
                 if scheduler.get_cron_update_state():
                     if scheduler.set_cron_schedule():
@@ -600,13 +610,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-'''
-inventory = [
-    {
-        'name': 'node1',
-        'ip': 'ip'
-    }
-]
-'''

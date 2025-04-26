@@ -7,6 +7,8 @@ from logging import Logger
 from typing import Dict, List
 from uuid import uuid4
 from urllib.parse import quote_plus
+from datetime import datetime, timedelta
+from time import sleep
 
 import ansible_runner
 from pymongo import MongoClient
@@ -330,7 +332,7 @@ class Schedule(Utils):
         if self.__check_job_run_file_exists(job.get('type'), job.get('run')):
             if not self.__validate_timezone(job.get('timezone')):
                 return False
-            if 'at' in job:
+            if job.get('at'):
                 if not self.__validate_job_at_time(job.get('frequency'), job.get('at')):
                     return False
             job['_id'] = str(uuid4())
@@ -366,7 +368,7 @@ class Schedule(Utils):
             data[key.strip()] = value.strip()
         return data
 
-    def __parse_ansible_job_data(self, job: Dict) -> Dict:
+    def __parse_ansible_job_data(self, job: Dict) -> bool:
         if job.get('hostInventory'):
             data = self.__parse_key_value_data(job['hostInventory'])
             if not data:
@@ -545,4 +547,72 @@ class Schedule(Utils):
             return False
         if job is not None:
             return self._display_info(f'Job Schedule:\n{json.dumps(job, indent=2)}')
+        return False
+
+    def __wait_for_job_completion(self, job_id: str, max_wait: int = 1800) -> bool:
+        try:
+            scheduled = False
+            while max_wait > 0:
+                if not scheduled:
+                    state = self.__db.get_one('scheduledJob', {'_id': job_id}, {'state': 1})
+                    if state and state.get('state') == 'done':
+                        scheduled = True
+                if scheduled:
+                    result = self.__db.get_one('jobs', {'_id': job_id}, {'result': 1, 'error': 1})
+                    if result and result.get('result') is not None:
+                        if result['result'] is True:
+                            self.log.info('Job completed successfully')
+                            return True
+                        else:
+                            self.log.error(f'Job failed: {result.get("error")}')
+                            return False
+                sleep(5)
+                max_wait -= 5
+            self.log.error('Failed to wait for job completion in allotted time')
+        except KeyboardInterrupt:
+            self.log.info('Waiting for job completion interrupted')
+            return False
+        except Exception:
+            self.log.exception('Failed to wait for job completion')
+            return False
+
+    def run_predefined_job(self, job_id: str, args: List[str] = None, host_inventory: Dict = None,
+                           extra_vars: Dict = None, wait: bool = False) -> bool:
+        job = self.get_job_by_id(job_id)
+        if job:
+            if job.get('type') == 'ansible':
+                if host_inventory:
+                    job['hostInventory'] = host_inventory if host_inventory != 'None' else None
+                if extra_vars:
+                    job['extraVars'] = extra_vars if extra_vars != 'None' else None
+                if not self.__parse_ansible_job_data(job):
+                    return False
+            else:
+                if args:
+                    job['args'] = args
+            return self.__create_manual_job(job, wait)
+        return False
+
+    def __create_manual_job(self, job: Dict, wait: bool = False) -> bool:
+        job['_id'] = str(uuid4())
+        job['expiryTime'] = datetime.now() + timedelta(hours=1)
+        job['state'] = 'pending'
+        if self.__db.insert_one('scheduledJob', job):
+            if wait:
+                self.log.info(f'Job {job.get("name")} sent to scheduler successfully. Waiting for completion...')
+                return self.__wait_for_job_completion(job['_id'])
+            self.log.info(f'Job {job.get("name")} sent to scheduler successfully')
+            return True
+        else:
+            self.log.error(f'Failed to send job {job.get("name")} to scheduler')
+        return False
+
+    def run_job(self, job: Dict):
+        if job.get('name', '') == 'GENERATE':
+            job['name'] = f'manual-{job.get("type")}-{job.get("run")}'
+        if self.__check_job_run_file_exists(job.get('type'), job.get('run')):
+            if job.get('type') == 'ansible':
+                if not self.__parse_ansible_job_data(job):
+                    return False
+            return self.__create_manual_job(job, job.get('wait', False))
         return False

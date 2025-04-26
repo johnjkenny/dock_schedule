@@ -244,6 +244,8 @@ def parse_job_args(args: dict):
         return update_job(args['update'])
     if args.get('get'):
         return get_job_schedule(args['get'])
+    if args.get('run'):
+        return run_job(args['run'])
     return True
 
 
@@ -276,6 +278,7 @@ def jobs(parent_args: list = None):
         'run': {
             'short': 'r',
             'help': 'Run a dock-schedule job (specify job name)',
+            'nargs': REMAINDER
         },
     }).set_arguments()
     if not parse_job_args(args):
@@ -494,5 +497,70 @@ def get_job_schedule(parent_args: list = None):
         }
     }).set_arguments()
     if not parse_get_job_schedule_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_run_job_args(args: dict):
+    if args.get('id'):
+        return Schedule().run_predefined_job(args['id'], args.get('args'), args.get('hostInventory'),
+                                             args.get('extraVars'), args.get('wait'))
+    if args.get('run'):
+        if not args.get('type'):
+            return Schedule()._display_error('Error: --type (-t) is required to run a job')
+        return Schedule().run_job(args)
+    return True
+
+
+def run_job(parent_args: list = None):
+    args = ArgParser('Dock Schedule: Run Job', parent_args, {
+        'id': {
+            'short': 'i',
+            'help': 'ID of the cron job to run if you want to run a predefined job',
+        },
+        'name': {
+            'short': 'n',
+            'help': 'Name to use for the job run. Default: manual-<type>-<run> (example: manual-python3-hello.py)',
+            'default': 'GENERATE',
+        },
+        'type': {
+            'short': 't',
+            'help': 'Job type to run. Will use predefined if "--id" is used. \
+                Options: python3, ansible, bash, php, node',
+            'choices': ['python3', 'ansible', 'bash', 'php', 'node'],
+        },
+        'run': {
+            'short': 'r',
+            'help': 'Job file to run. Will use predefined if "--id" is used. This should be located: \
+                /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or node type. \
+                /opt/dock-schedule/ansible/playbooks/<run> for ansible type',
+        },
+        'args': {
+            'short': 'a',
+            'help': 'Arguments to pass to the python3, bash, php or node script arg parser \
+                (example: "--arg1 value1", "--arg2 value2"). Will override predefined if "--id" is used',
+            'nargs': '+',
+            'default': None
+        },
+        'hostInventory': {
+            'short': 'H',
+            'help': 'Host inventory to run remote ansible job on. Requires key=value pairs separated by comma: \
+                "hostname1=ip1, hostname2=ip2". Will override predefined if "--id" is used. Use "None" to remove and \
+                use worker localhost.',
+            'default': None
+        },
+        'extraVars': {
+            'short': 'e',
+            'help': 'Extra vars to pass to the ansible job. Requires key=value pairs separated by comma. \
+                "var1=value1, var2=value2". Will override predefined if "--id" is used.',
+            'default': None
+        },
+        'wait': {
+            'short': 'w',
+            'help': 'Wait for the job to finish before returning. Default: False',
+            'action': 'store_true',
+        }
+    }).set_arguments()
+    if not parse_run_job_args(args):
         exit(1)
     exit(0)
