@@ -550,15 +550,15 @@ class JobScheduler():
         jobs = self.__db.get_all('scheduledJob', {'state': 'pending'})
         if jobs:
             for job in jobs:
-                if not self._run_cron(job):
+                if not self._run_cron(job, job.get('_id')):
                     self.log.error(f'Failed to schedule job {job.get("name")}')
                 if not self.__db.update_one('scheduledJob', {'_id': job.get('_id')}, {'$set': {'state': 'done'}}):
                     self.log.error(f'Failed to update job {job.get("name")} schedule state to done')
 
-    def _run_cron(self, cron: Dict):
+    def _run_cron(self, cron: Dict, job_id: str = None):
         try:
             job = {
-                '_id': cron.get('_id') or str(uuid4()),
+                '_id': job_id or str(uuid4()),
                 'name': cron.get('name', ''),
                 'type': cron.get('type'),
                 'run': cron.get('run', ''),
@@ -566,6 +566,9 @@ class JobScheduler():
                 'hostInventory': cron.get('hostInventory', {}),
                 'extraVars': cron.get('extraVars', {}),
                 'state': 'pending',
+                'scheduled': datetime.now().isoformat(),
+                'start': None,
+                'end': None,
                 'result': None,
                 'error': None,
             }

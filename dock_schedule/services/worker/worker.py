@@ -8,6 +8,7 @@ from json import loads
 from typing import Dict
 from tempfile import TemporaryDirectory
 from urllib.parse import quote_plus
+from datetime import datetime
 
 import ansible_runner
 from pika import SelectConnection, BaseConnection
@@ -483,6 +484,7 @@ class Worker():
 
     def __handle_result(self, result: ansible_runner.runner.Runner, job: Dict):
         job['state'] = 'completed'
+        job['end'] = datetime.now()
         if result.rc == 0:
             self.log.info(f"Job completed successfully: {job.get("name")} {job.get("_id")[:8]}")
             job['result'] = True
@@ -503,6 +505,7 @@ class Worker():
 
     def run_job(self, job: Dict) -> bool:
         self.log.info(f'Running job: {job.get("name")} {job.get("_id")[:8]}')
+        job['start'] = datetime.now()
         inventory = self.__parse_host_inventory(job.get('hostInventory'))
         playbook = self.__parse_playbook(job)
         if inventory and playbook:
