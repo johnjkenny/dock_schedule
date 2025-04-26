@@ -246,6 +246,8 @@ def parse_job_args(args: dict):
         return get_job_schedule(args['get'])
     if args.get('run'):
         return run_job(args['run'])
+    if args.get('results'):
+        return job_results(args['results'])
     return True
 
 
@@ -280,6 +282,11 @@ def jobs(parent_args: list = None):
             'help': 'Run a dock-schedule job (specify job name)',
             'nargs': REMAINDER
         },
+        'results': {
+            'short': 'R',
+            'help': 'Get the results of dock-schedule jobs',
+            'nargs': REMAINDER,
+        }
     }).set_arguments()
     if not parse_job_args(args):
         exit(1)
@@ -562,5 +569,46 @@ def run_job(parent_args: list = None):
         }
     }).set_arguments()
     if not parse_run_job_args(args):
+        exit(1)
+    exit(0)
+
+
+def parse_job_result_args(args: dict):
+    if args['name'] == 'all':
+        args['name'] = None
+    return Schedule().display_results(args['id'], args['name'], args['filter'], args['limit'], args['verbose'])
+
+
+def job_results(parent_args: list = None):
+    args = ArgParser('Dock Schedule: Run Job', parent_args, {
+        'id': {
+            'short': 'i',
+            'help': 'ID of the job to get results for',
+            'default': None
+        },
+        'name': {
+            'short': 'n',
+            'help': 'Job name to query. Use "all" to get all jobs.',
+            'default': None
+        },
+        'limit': {
+            'short': 'l',
+            'help': 'Limit the number of job results to return. Default: 10',
+            'type': int,
+            'default': 10
+        },
+        'filter': {
+            'short': 'f',
+            'help': 'Filter the job results by status. Options: success, failed, scheduled',
+            'choices': ['success', 'failed', 'scheduled'],
+            'default': None
+        },
+        'verbose': {
+            'short': 'v',
+            'help': 'Enable verbose output',
+            'action': 'store_true'
+        }
+    }).set_arguments()
+    if not parse_job_result_args(args):
         exit(1)
     exit(0)

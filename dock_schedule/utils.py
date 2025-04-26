@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from time import sleep
 
 import ansible_runner
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from pymongo.errors import ConnectionFailure, OperationFailure
 from pytz import all_timezones_set
 
@@ -257,6 +257,13 @@ class Utils():
                 self.log.error(f'Failed to run ansible playbook: {result.status}')
                 return False
             return True
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class Schedule(Utils):
@@ -616,3 +623,92 @@ class Schedule(Utils):
                     return False
             return self.__create_manual_job(job, job.get('wait', False))
         return False
+
+    def get_jobs_by_filter(self, _filter: Dict, limit: int = 10) -> List[Dict] | None:
+        if not _filter:
+            cursor = self.__db.get_all_with_cursor('jobs')
+        else:
+            cursor = self.__db.get_all_with_cursor('jobs', _filter)
+        if cursor:
+            return list(cursor.sort('scheduled', DESCENDING).limit(limit))
+        return []
+
+    def __determine_result_color(self, result: bool) -> str:
+        if result is True:
+            return 'green'
+        elif result is False:
+            return 'red'
+        return 'yellow'
+
+    def __convert_timedelta_to_units(self, delta: timedelta):
+        """Convert timedelta to time units. If days > 0, return days and hours:minutes:seconds unless days > 365 which
+        {days // 365} year(s) {days % 365} day(s) and {hours}:{minutes} is returned. If hours > 0, return
+        hours and minutes:seconds. If minutes > 0, return minutes and seconds. If seconds > 0, return seconds. If
+        milliseconds > 0, return milliseconds. Else return microseconds
+
+        Args:
+            delta (timedelta): datetime.timedelta object to convert to time units
+
+        Returns:
+            str: time units or empty string if failed
+        """
+        try:
+            days = delta.days
+            hours = delta.seconds // 3600
+            minutes = (delta.seconds // 60) % 60
+            seconds = delta.seconds % 60
+            milliseconds = delta.microseconds // 1000
+            microseconds = delta.microseconds % 1000
+            if days > 0:
+                if days >= 365:
+                    return f"{days // 365} year(s) {days % 365} day(s) and {hours}:{minutes}"
+                return f"{days} day(s) and {hours}:{minutes:02}:{seconds:02}"
+            if hours > 0:
+                return f"{hours} hour(s) and {minutes:02}:{seconds:02}"
+            if minutes > 0:
+                return f"{minutes} minute(s) and {seconds:02}.{milliseconds:03} seconds"
+            if seconds > 0:
+                return f"{seconds:02}.{milliseconds:03} seconds"
+            if milliseconds > 0:
+                return f"{milliseconds} ms"
+            if microseconds > 0:
+                return f"{microseconds} µs"
+            return f"{(microseconds * 1000) % 1000} ns"
+        except Exception:
+            self.log.exception("Failed to convert timedelta to units")
+        return str(delta)
+
+    def __determine_result_filter(self, _filter: str, _filters: Dict) -> Dict:
+        if _filter == 'success':
+            _filters['result'] = True
+        elif _filter == 'failed':
+            _filters['result'] = False
+        elif _filter == 'scheduled':
+            _filters['state'] = 'pending'
+        else:
+            self.log.error(f'Invalid filter: {_filter}')
+
+    def display_results(self, job_id: str = None, job_name: str = None, _filter: str = None, limit: int = 10,
+                        verbose: bool = False) -> bool:
+        if job_id:
+            results = self.get_jobs_by_filter({'_id': job_id}, 1)
+        else:
+            _filters = {}
+            if job_name:
+                _filters['name'] = job_name
+            if _filter:
+                self.__determine_result_filter(_filter, _filters)
+            results = self.get_jobs_by_filter(_filters, limit)
+        if verbose:
+            return self._display_info(f'Job Results:\n{json.dumps(results, indent=2, cls=DateTimeEncoder)}')
+        for r in results:
+            color = self.__determine_result_color(r.get('result'))
+            error = r.get('error', 'N/A') if color == 'red' else ''
+            msg = f'ID: {r.get('_id')}, Name: {r.get("name")}, State: {r.get("state")}, Result: {r.get("result")}, '
+            if r.get('end'):
+                msg += f'Duration: {self.__convert_timedelta_to_units(r.get("end") - r.get("start"))}'
+            else:
+                msg += 'Duration: N/A'
+            if error:
+                msg += f'\n  Error: {error}'
+            Color().print_message(msg + '\n', color)
