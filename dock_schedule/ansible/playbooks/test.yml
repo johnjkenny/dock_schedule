@@ -1,0 +1,14 @@
+- name: Ansible Test Playbook
+  hosts: all
+  gather_facts: false
+  vars:
+    exit_code: ''
+  tasks:
+    - name: Fail if exit_code is not 0
+      ansible.builtin.fail:
+        msg: "Invalid exit code: {{ exit_code }}"
+      when: exit_code not in ['0', 0]
+
+    - name: Exit 0
+      ansible.builtin.meta: end_play
+      when: exit_code in ['0', 0]

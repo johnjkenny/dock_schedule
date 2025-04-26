@@ -221,3 +221,138 @@ localhost                  : ok=35   changed=28   unreachable=0    failed=0    s
 
 # Jobs
 
+Create cron Job
+```bash
+dschedule -j -c -n Python-Test01 -t python3 -r test.py -a 0 -f hour -i 1 
+[2025-04-26 16:06:17,987][INFO][utils,343]: Job Python-Test01 created successfully
+
+dschedule -j -l
+Job Schedule:
+[
+  {
+    "_id": "69112dee-97d0-47a9-9a5d-b63e3f15e51c",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "frequency": "hour",
+    "interval": 1,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  }
+]
+
+```
+
+Run Job manually:
+You can manually run jobs using the `--run` option. This will create a new job and send it to the scheduler. The scheduler
+probes the manual jobs every 5 seconds so there may be a delay in the job execution especially if the job queue is
+already backlogged. You can wait for the job to complete using the `--wait` option of desired. You can select to run
+a predefined cron job using the `--id` options and providing the the job cron ID to run. You can also specify the job
+parameters for the manual run similar to creating a cron job using the `--create` minus the frequency the job should
+run.
+
+Command Options:
+```bash
+dschedule -j -r -h
+usage: dschedule [-h] [-i ID] [-n NAME] [-t {python3,ansible,bash,php,node}] [-r RUN]
+                 [-a ARGS [ARGS ...]] [-H HOSTINVENTORY] [-e EXTRAVARS] [-w]
+
+Dock Schedule: Run Job
+
+options:
+  -h, --help            show this help message and exit
+
+  -i ID, --id ID        ID of the cron job to run if you want to run a predefined job
+
+  -n NAME, --name NAME  Name to use for the job run. Default: manual-<type>-<run> (example: manual-
+                        python3-hello.py)
+
+  -t {python3,ansible,bash,php,node}, --type {python3,ansible,bash,php,node}
+                        Job type to run. Will use predefined if "--id" is used. Options: python3,
+                        ansible, bash, php, node
+
+  -r RUN, --run RUN     Job file to run. Will use predefined if "--id" is used. This should be
+                        located: /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or
+                        node type. /opt/dock-schedule/ansible/playbooks/<run> for ansible type
+
+  -a ARGS [ARGS ...], --args ARGS [ARGS ...]
+                        Arguments to pass to the python3, bash, php or node script arg parser
+                        (example: "--arg1 value1", "--arg2 value2"). Will override predefined if "--
+                        id" is used
+
+  -H HOSTINVENTORY, --hostInventory HOSTINVENTORY
+                        Host inventory to run remote ansible job on. Requires key=value pairs
+                        separated by comma: "hostname1=ip1, hostname2=ip2". Will override predefined
+                        if "--id" is used. Use "None" to remove and use worker localhost.
+
+  -e EXTRAVARS, --extraVars EXTRAVARS
+                        Extra vars to pass to the ansible job. Requires key=value pairs separated by
+                        comma. "var1=value1, var2=value2". Will override predefined if "--id" is
+                        used.
+
+  -w, --wait            Wait for the job to finish before returning. Default: False
+```
+
+
+```bash
+# Drop --wait, -w to run job in background
+dschedule -j -r -i 69112dee-97d0-47a9-9a5d-b63e3f15e51c -w
+[2025-04-26 16:16:00,720][INFO][utils,597]: Job Python-Test01 sent to scheduler successfully. Waiting for completion...
+[2025-04-26 16:16:15,726][INFO][utils,564]: Job completed successfully
+
+# Change run args:
+dschedule -j -r -i 69112dee-97d0-47a9-9a5d-b63e3f15e51c -w -a 1
+[2025-04-26 16:17:47,608][INFO][utils,597]: Job Python-Test01 sent to scheduler successfully. Waiting for completion...
+[2025-04-26 16:18:02,616][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+
+# Python test job
+dschedule -j -r -t python3 -r test.py -a 0 -w
+[2025-04-26 17:03:04,663][INFO][utils,601]: Job manual-python3-test.py sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:03:09,669][INFO][utils,564]: Job completed successfully
+
+dschedule -j -r -t python3 -r test.py -a 1 -w
+[2025-04-26 17:03:20,693][INFO][utils,601]: Job manual-python3-test.py sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:03:25,699][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+
+# Php test job
+dschedule -j -r -t php -r test.php -a 0 -w
+[2025-04-26 17:04:10,244][INFO][utils,601]: Job manual-php-test.php sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:04:15,250][INFO][utils,564]: Job completed successfully
+
+dschedule -j -r -t php -r test.php -a 1 -w
+[2025-04-26 17:04:18,848][INFO][utils,601]: Job manual-php-test.php sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:04:23,853][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+
+# Bash test job
+dschedule -j -r -t bash -r test.sh -a 0 -w
+[2025-04-26 17:04:39,596][INFO][utils,601]: Job manual-bash-test.sh sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:04:44,601][INFO][utils,564]: Job completed successfully
+
+dschedule -j -r -t bash -r test.sh -a 1 -w
+[2025-04-26 17:04:46,892][INFO][utils,601]: Job manual-bash-test.sh sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:04:51,898][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+
+# Node/JS test bob
+dschedule -j -r -t node -r test.js -a 0 -w
+[2025-04-26 17:06:44,474][INFO][utils,601]: Job manual-node-test.js sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:06:49,477][INFO][utils,564]: Job completed successfully
+
+dschedule -j -r -t node -r test.js -a 1 -w
+[2025-04-26 17:06:52,151][INFO][utils,601]: Job manual-node-test.js sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:06:57,154][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+
+# Ansible test job
+dschedule -j -r -t ansible -r test.yml -e exit_code=0 -w
+[2025-04-26 17:38:27,305][INFO][utils,601]: Job manual-ansible-test.yml sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:38:32,307][INFO][utils,564]: Job completed successfully
+
+dschedule -j -r -t ansible -r test.yml -e exit_code=1 -w
+[2025-04-26 17:27:24,828][INFO][utils,601]: Job manual-ansible-test.yml sent to scheduler successfully. Waiting for completion...
+[2025-04-26 17:27:29,830][ERROR][utils,567]: Job failed: Task 'Fail if exit_code is not 0' failed on host 'localhost': Invalid exit code: 1
+```
