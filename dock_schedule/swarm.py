@@ -1,11 +1,14 @@
 import requests
 import json
+import subprocess
+
 from tempfile import NamedTemporaryFile
 from logging import Logger
 from socket import gethostname
 from typing import Dict, Set
 
 from yaml import safe_load, safe_dump
+from prettytable import PrettyTable
 
 from dock_schedule.color import Color
 from dock_schedule.utils import Utils
@@ -360,20 +363,145 @@ class Services(Swarm):
                 except Exception:
                     self.log.exception('Failed to parse JSON')
 
-    def display_services(self):
-        containers = 0
+    def __determine_display_color(self, replicas: str, total: int):
+        if '/' in replicas:
+            split_info = replicas.split('/')
+            qty = int(split_info[0])
+            total += qty
+            if split_info[0] == split_info[1]:
+                return 'green', total
+            if qty < int(split_info[1]):
+                return 'red', total
+        return 'yellow', total
+
+    def display_services(self, verbose: bool = False):
+        total = 0
         color = Color()
-        color.print_message('Services:', 'cyan')
+        table = PrettyTable()
+        table.field_names = ['ID', 'Name', 'Image', 'Replicas']
         for service in self.get_services():
             service: Dict
             replicas = service.get('Replicas')
-            replica_data = replicas.split('/')
-            version = service.get('Image').split(':')[1]
-            name = service.get('Name', '').replace('dock-schedule_', '')
-            containers += int(replica_data[0])
-            if replica_data[0] == replica_data[1]:
-                color.print_message(f'  {name}:{version} {replica_data[0]}', 'green')
+            display_color, total = self.__determine_display_color(replicas, total)
+            if verbose:
+                color.print_message(json.dumps(service, indent=2), display_color)
             else:
-                color.print_message(f'  {name}:{version} {replicas}', 'red')
-        color.print_message(f'Total containers: {containers}', 'magenta')
+                table.add_row([
+                    color.format_message(service.get('ID'), display_color),
+                    color.format_message(service.get('Name', '').replace('dock-schedule_', ''), display_color),
+                    color.format_message(service.get('Image'), display_color),
+                    color.format_message(replicas, display_color)
+                ])
+        if not verbose:
+            table.add_row(['-', '-', '-', color.format_message('Total: ' + str(total), 'magenta')])
+            print(table)
         return True
+
+
+class Containers(Utils):
+    def __init__(self, logger: Logger = None):
+        super().__init__(logger)
+
+    def get_containers(self):
+        rsp = self._run_cmd('docker ps --all --format json')
+        if rsp[1]:
+            for line in rsp[0].splitlines():
+                try:
+                    container = json.loads(line.strip())
+                    if 'dock-schedule_' in container.get('Names', ''):
+                        yield container
+                except Exception:
+                    self.log.exception('Failed to parse JSON')
+
+    def __determine_display_color(self, status: str) -> str:
+        if '(healthy)' in status:
+            return 'green'
+        if '(health: starting)' in status:
+            return 'yellow'
+        else:
+            return 'red'
+
+    def display_containers(self, verbose: bool = False):
+        color = Color()
+        table = PrettyTable()
+        table.field_names = ['ID', 'Name', 'Image', 'Status']
+        for container in self.get_containers():
+            container: Dict
+            display_color = self.__determine_display_color(container.get('Status', ''))
+            if verbose:
+                color.print_message(json.dumps(container, indent=2), display_color)
+            else:
+                name_info = container.get('Names', '').split('.')
+                name = name_info[0].replace('dock-schedule_', '') + f'.{name_info[1][0]}'
+                table.add_row([
+                    color.format_message(container.get('ID'), display_color),
+                    color.format_message(name, display_color),
+                    color.format_message(container.get('Image'), display_color),
+                    color.format_message(container.get('Status'), display_color)
+                ])
+        if not verbose:
+            print(table)
+        return True
+
+    def container_id_lookup(self, container_name: str):
+        if len(container_name) == 12 and container_name.isalnum():
+            return container_name
+        for containers in self.get_containers():
+            containers: Dict
+            if container_name in containers.get('Names', ''):
+                return containers.get('ID')
+        self.log.error(f'Container {container_name} not found')
+        return None
+
+    def prune_containers(self):
+        self.log.info('Pruning containers')
+        return self._run_cmd('docker container prune --force')[1]
+
+    def container_logs(self, container_name: str):
+        container_id = self.container_id_lookup(container_name)
+        if container_id:
+            process = subprocess.Popen(['docker', 'logs', container_id],
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT,
+                                       text=True,
+                                       bufsize=1)
+            for line in process.stdout:
+                print(line, end='')
+            return True
+        return False
+
+    def container_watcher(self, container_name: str):
+        container_id = self.container_id_lookup(container_name)
+        if container_id:
+            process = subprocess.Popen(['docker', 'logs', '-f', container_id],
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT,
+                                       text=True,
+                                       bufsize=1)
+            try:
+                for line in process.stdout:
+                    print(line, end='')
+            except KeyboardInterrupt:
+                process.terminate()
+            except Exception:
+                self.log.exception('Failed to get container logs container')
+                return False
+            return True
+        return False
+
+    def __get_all_container_stats(self):
+        rsp = self._run_cmd('docker stats --format json --no-stream')
+        if rsp[1]:
+            for line in rsp[0].splitlines():
+                self._display_info(json.dumps(json.loads(line), indent=2))
+        return True
+
+    def container_stats(self, container_name: str = 'all'):
+        if container_name == 'all':
+            return self.__get_all_container_stats()
+        container_id = self.container_id_lookup(container_name)
+        if container_id:
+            rsp = self._run_cmd(f'docker stats --format json --no-stream {container_id}')
+            if rsp[1]:
+                return self._display_info(json.dumps(json.loads(rsp[0]), indent=2))
+        return False
