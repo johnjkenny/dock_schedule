@@ -1,9 +1,10 @@
 from argparse import REMAINDER
 
 from dock_schedule.arg_parser import ArgParser
-from dock_schedule.utils import Utils, Schedule
+from dock_schedule.utils import Utils
+from dock_schedule.schedule import Schedule
 from dock_schedule.init import Init
-from dock_schedule.swarm import Swarm, Services
+from dock_schedule.swarm import Swarm, Services, Containers
 
 
 def parse_parent_args(args: dict):
@@ -169,7 +170,7 @@ def parse_service_args(args: dict):
     if args.get('stop'):
         return Services().stop_services(args['stop'])
     if args.get('list'):
-        return Services().display_services()
+        return Services().display_services(args['verbose'])
     return True
 
 
@@ -205,6 +206,11 @@ def services(parent_args: list = None):
             'short': 'l',
             'help': 'List dock-schedule services and their status',
             'action': 'store_true'
+        },
+        'verbose': {
+            'short': 'v',
+            'help': 'Enable verbose output',
+            'action': 'store_true'
         }
         # ToDO: Add build methods???? Maybe?
     }).set_arguments()
@@ -214,18 +220,48 @@ def services(parent_args: list = None):
 
 
 def parse_container_args(args: dict):
+    if args.get('list'):
+        return Containers().display_containers(args['verbose'])
+    if args.get('prune'):
+        return Containers().prune_containers()
+    if args.get('watch'):
+        return Containers().container_watcher(args['watch'])
+    if args.get('logs'):
+        return Containers().container_logs(args['logs'])
+    if args.get('stats'):
+        return Containers().container_stats(args['stats'])
     return True
 
 
 def containers(parent_args: list = None):
     args = ArgParser('Dock Schedule: Containers', parent_args, {
-        'get': {
-            'short': 'g',
-            'help': 'Get dock-schedule service containers and their status',
+        'list': {
+            'short': 'l',
+            'help': 'Get dock-schedule node containers',
+            'action': 'store_true'
         },
         'logs': {
-            'short': 'l',
-            'help': 'Display logs for a dock-schedule service container (specify container name)',
+            'short': 'L',
+            'help': 'Get logs for a dock-schedule service container (specify container name or ID)',
+        },
+        'watch': {
+            'short': 'w',
+            'help': 'Watch logs for a dock-schedule service container (specify container name or ID)',
+        },
+        'prune': {
+            'short': 'p',
+            'help': 'Prune dock-schedule containers',
+            'action': 'store_true'
+        },
+        'verbose': {
+            'short': 'v',
+            'help': 'Enable verbose output',
+            'action': 'store_true'
+        },
+        'stats': {
+            'short': 's',
+            'help': 'Get stats for dock-schedule containers (specify container name or ID). Use "all" to get all \
+                containers',
         }
     }).set_arguments()
     if not parse_container_args(args):

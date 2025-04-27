@@ -62,6 +62,7 @@
         "pipefail",
         "PKCS",
         "platformdirs",
+        "prettytable",
         "procps",
         "ptyprocess",
         "pycache",
@@ -88,6 +89,7 @@
         "usermod",
         "VHOST",
         "wcmatch",
+        "wcwidth",
         "zipp"
     ]
 }
