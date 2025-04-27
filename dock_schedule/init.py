@@ -169,7 +169,7 @@ class Init(Utils):
     def __create_hosts_entry(self):
         try:
             with open('/etc/hosts', 'a+') as file:
-                file.write('\n127.0.0.1  proxy\n127.0.0.1  mongodb\n')
+                file.write('\n127.0.0.1  proxy\n127.0.0.1  mongodb\n127.0.0.1  registry\n')
             return True
         except Exception:
             self.log.exception('Failed to create /etc/hosts entry for proxy service')

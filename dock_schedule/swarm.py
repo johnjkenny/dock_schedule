@@ -359,7 +359,9 @@ class Services(Swarm):
         if rsp[1]:
             for line in rsp[0].splitlines():
                 try:
-                    yield json.loads(line.strip())
+                    service = json.loads(line.strip())
+                    if 'dock-schedule_' in service.get('Name', ''):
+                        yield service
                 except Exception:
                     self.log.exception('Failed to parse JSON')
 

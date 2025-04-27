@@ -1,0 +1,25 @@
+services:
+  registry:
+    image: registry:5000/dschedule_registry:1.0.0
+    build: /opt/dock-schedule/registry
+    volumes:
+      - /opt/dock-schedule/registry/data:/var/lib/registry
+    environment:
+      - OTEL_SDK_DISABLED=true
+      - OTEL_TRACES_EXPORTER=none
+    ports:
+      - 5000:5000
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'registry']
+      interval: 10s
+      timeout: 5s
+      retries: 3
