@@ -1,0 +1,5 @@
+- name: Disable and Stop NFS client
+  ansible.builtin.systemd:
+    name: nfs-client.target
+    state: stopped
+    enabled: false

@@ -35,14 +35,14 @@ def parent():
             'help': 'Dock Schedule swarm commands',
             'nargs': REMAINDER
         },
-        'workers': {
-            'short': 'w',
-            'help': 'Dock Schedule worker commands',
-            'nargs': REMAINDER
-        },
         'services': {
             'short': 's',
             'help': 'Dock Schedule service commands',
+            'nargs': REMAINDER
+        },
+        'workers': {
+            'short': 'w',
+            'help': 'Dock Schedule worker commands',
             'nargs': REMAINDER
         },
         'containers': {

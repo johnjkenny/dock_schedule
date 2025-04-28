@@ -218,7 +218,7 @@ class Services(Swarm):
 
     def __reload_service(self, service: str):
         service = service.replace('dock-schedule_', '')
-        if service in self.__service_names:
+        if service in self.__service_names or service == 'registry':
             self.log.info(f'Reloading {service} service')
             return self._run_cmd(f'docker service update --force dock-schedule_{service}')[1]
         if len(service) == 12 and service.isalnum():
@@ -244,9 +244,11 @@ class Services(Swarm):
     def rebalance_services(self):
         if self.get_active_swarm_node_qty() > 1:
             self.log.info('Rebalancing swarm services')
+            deployed = self.deployed_services()
             for service in self.__rebalance_services:
-                if not self.__reload_service(service):
-                    return False
+                if service in deployed:
+                    if not self.__reload_service(service):
+                        return False
         else:
             self.log.warning('Only one node in the cluster. Add more nodes to swarm cluster to rebalance services')
         return True
@@ -331,7 +333,7 @@ class Services(Swarm):
                 if not self.__stop_service(service.strip()):
                     return False
             else:
-                self.log.info(f'Service {service} is not running')
+                self.log.info(f'Cannot stop service "{service}"')
         return True
 
     def stop_services(self, service: str = 'all'):
@@ -342,8 +344,8 @@ class Services(Swarm):
             return self.__stop_multiple_services(deployed, deployed)
         if service in deployed:
             return self.__stop_service(service)
-        self.log.info(f'Service {service} is not running')
-        return True
+        self.log.error(f'Cannot stop service "{service}"')
+        return False
 
     def deployed_services(self) -> Set:
         services = set()
