@@ -98,5 +98,4 @@
         "wcwidth",
         "zipp"
     ],
-    "ansible.python.interpreterPath": "/home/jkenny/find_job/github/dock_schedule/venv/bin/python"
 }
