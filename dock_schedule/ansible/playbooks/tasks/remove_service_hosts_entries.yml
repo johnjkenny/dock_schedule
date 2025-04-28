@@ -1,0 +1,12 @@
+- name: Remove service host entries
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+    state: absent
+    mode: '0644'
+    owner: root
+    group: root
+  loop:
+    - "127.0.0.1  proxy"
+    - "127.0.0.1  mongodb"
+    - "127.0.0.1  registry"

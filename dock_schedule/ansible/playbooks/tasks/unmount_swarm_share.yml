@@ -1,0 +1,7 @@
+- name: Unmount swarm NFS share
+  ansible.posix.mount:
+    path: /opt/dock-schedule
+    src: "{{ nfs_server }}:/opt/dock-schedule"
+    fstype: nfs
+    opts: defaults
+    state: absent

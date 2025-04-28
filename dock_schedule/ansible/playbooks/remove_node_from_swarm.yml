@@ -4,11 +4,29 @@
   gather_facts: true
   become: true
   tasks:
+    - name: Get Swarm Manager IP
+      ansible.builtin.import_tasks: tasks/get_swarm_manager_ip.yml
+
     - name: Drain removal node
       ansible.builtin.import_tasks: tasks/drain_swarm_node.yml
 
     - name: Leave Swarm
       ansible.builtin.import_tasks: tasks/leave_swarm.yml
+
+    - name: Remove Service Hosts Entries
+      ansible.builtin.import_tasks: tasks/remove_service_hosts_entries.yml
+
+    - name: Remove venv RC entry
+      ansible.builtin.import_tasks: tasks/remove_venv_rc_entry.yml
+
+    - name: Unmount NFS Share
+      ansible.builtin.import_tasks: tasks/unmount_swarm_share.yml
+
+    - name: Remove Swarm Firewall Rules
+      ansible.builtin.import_tasks: tasks/remove_swarm_firewall_rules.yml
+
+    - name: Stop NFS Client Service
+      ansible.builtin.import_tasks: tasks/stop_nfs_client_service.yml
 
     - name: Cleanup swarm node on manager
       ansible.builtin.import_tasks: tasks/node_removal_cleanup.yml

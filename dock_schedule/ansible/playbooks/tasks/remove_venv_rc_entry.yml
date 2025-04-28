@@ -1,0 +1,8 @@
+- name: Create RC entry for venv
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: "source /opt/dock-schedule/venv/bin/activate"
+    state: absent
+    mode: '0644'
+    owner: root
+    group: root

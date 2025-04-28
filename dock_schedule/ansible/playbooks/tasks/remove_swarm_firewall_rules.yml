@@ -1,71 +1,58 @@
-- name: Install Firewalld
-  ansible.builtin.package:
-    zone: public
-    name: firewalld
-    state: present
-
-- name: Start Firewalld
-  ansible.builtin.systemd:
-    zone: public
-    name: firewalld
-    state: started
-    enabled: true
-
-- name: Open Swarm TCP management port (2377)
+- name: Close Swarm TCP management port (2377)
   ansible.posix.firewalld:
     zone: public
     port: 2377/tcp
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
 
-- name: Open Swarm communication ports (7946 tcp/udp)
+- name: Close Swarm communication ports (7946 tcp/udp)
   ansible.posix.firewalld:
     zone: public
     port: "{{ item }}"
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
   loop:
     - 7946/tcp
     - 7946/udp
 
-- name: Open overlay network port (4789/udp)
+- name: Close overlay network port (4789/udp)
   ansible.posix.firewalld:
     zone: public
     port: 4789/udp
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
 
-- name: Open NFS port (2049/tcp)
+- name: Close NFS port (2049/tcp)
   ansible.posix.firewalld:
     zone: public
     port: 2049/tcp
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
 
-- name: Open HTTP Port (80/tcp)
+- name: Close HTTP Port (80/tcp)
   ansible.posix.firewalld:
     zone: public
     port: 80/tcp
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
 
-- name: Open HTTPS Port (443/tcp)
+- name: Close HTTPS Port (443/tcp)
   ansible.posix.firewalld:
     zone: public
     port: 443/tcp
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
 
-- name: Open Prometheus Port (8080/tcp)
+- name: Close Prometheus Port (8080/tcp)
   ansible.posix.firewalld:
     zone: public
     port: 8080/tcp
     permanent: true
-    state: enabled
+    state: disabled
     immediate: true
