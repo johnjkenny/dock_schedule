@@ -423,6 +423,15 @@ class Containers(Utils):
         else:
             return 'red'
 
+    def __determine_container_name(self, orig_name: str) -> str:
+        name_info = orig_name.split('.')
+        if len(name_info) > 1:
+            if name_info[1].isdigit():
+                return name_info[0].replace('dock-schedule_', '') + f'.{name_info[1]}'
+            else:
+                return name_info[0].replace('dock-schedule_', '')
+        return orig_name.replace('dock-schedule_', '')
+
     def display_containers(self, verbose: bool = False):
         color = Color()
         table = PrettyTable()
@@ -433,8 +442,7 @@ class Containers(Utils):
             if verbose:
                 color.print_message(json.dumps(container, indent=2), display_color)
             else:
-                name_info = container.get('Names', '').split('.')
-                name = name_info[0].replace('dock-schedule_', '') + f'.{name_info[1][0]}'
+                name = self.__determine_container_name(container.get('Names', ''))
                 table.add_row([
                     color.format_message(container.get('ID'), display_color),
                     color.format_message(name, display_color),
