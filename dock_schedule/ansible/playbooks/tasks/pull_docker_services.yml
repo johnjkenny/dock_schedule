@@ -1,0 +1,5 @@
+- name: Pull docker service images
+  ansible.builtin.command: docker compose --progress quiet pull
+  args:
+    chdir: /opt/dock-schedule
+  changed_when: true

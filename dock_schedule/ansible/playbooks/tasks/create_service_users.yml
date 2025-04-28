@@ -1,0 +1,22 @@
+- name: Create service groups
+  ansible.builtin.group:
+    name: "{{ item[0] }}"
+    gid: "{{ item[1] }}"
+    state: present
+  loop:
+    - [grafana, 3000]
+    - [rabbitmq, 3001]
+    - [mongodb, 3002]
+
+- name: Create service users
+  ansible.builtin.user:
+    name: "{{ item[0] }}"
+    uid: "{{ item[1] }}"
+    group: "{{ item[0] }}"
+    shell: /sbin/nologin
+    create_home: false
+    state: present
+  loop:
+    - [grafana, 3000]
+    - [rabbitmq, 3001]
+    - [mongodb, 3002]

@@ -1,0 +1,16 @@
+- name: Venv exists
+  ansible.builtin.stat:
+    path: /opt/dock-schedule/venv
+  register: venv_exists
+
+- name: Create RC entry for venv
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: "source /opt/dock-schedule/venv/bin/activate"
+    state: present
+    create: true
+    insertafter: EOF
+    mode: '0644'
+    owner: root
+    group: root
+  when: venv_exists.stat.exists and venv_exists.stat.isdir

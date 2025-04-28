@@ -62,12 +62,22 @@ correctly. Each user is given the following UID/GID on the swarm hosts and withi
 
 
 1. Install the required dependencies:
+It is recommended to create a python virtual environment on the export directory so it can be used on all swarm nodes
+in the cluster without the need to install the dependencies on each node. As part of the init process, if
+`/opt/dock-schedule/venv` directory exists then an entry will be added to `/root/.bashrc` to activate the virtual
+environment on every new shell session. This will give you access to the `dschedule` command regardless of the current
+directory you are in or swarm node type, but keep in mind that not all commands will work on all nodes at this time.
+Some commands will only work on the swarm manager node.
+
 ```bash
+# Create the directory:
+mkdir -p /opt/dock-schedule
+
 # create a virtual environment:
-python3 -m venv venv
+python3 -m venv /opt/dock-schedule/venv
 
 # activate the virtual environment:
-source venv/bin/activate
+source /opt/dock-schedule/venv/bin/activate
 
 # Install python dependencies:
 pip install -r requirements.txt
@@ -207,15 +217,24 @@ changed: [localhost]
 TASK [Open Prometheus Port (8080/tcp)] *****************************************
 changed: [localhost]
 
+TASK [Build Registry Service] **************************************************
+changed: [localhost]
+
+TASK [Start Registry Service] **************************************************
+changed: [localhost]
+
 TASK [Build docker images] *****************************************************
+changed: [localhost]
+
+TASK [Push docker images] ******************************************************
 changed: [localhost]
 
 TASK [Start Swarm Services] ****************************************************
 changed: [localhost]
 
 PLAY RECAP *********************************************************************
-localhost                  : ok=35   changed=28   unreachable=0    failed=0    skipped=4    rescued=0    ignored=0   
-[2025-04-25 15:03:22,277][INFO][utils,908]: Successfully initialized dock-schedule
+localhost                  : ok=38   changed=31   unreachable=0    failed=0    skipped=4    rescued=0    ignored=0   
+[2025-04-28 16:42:01,469][INFO][init,212]: Successfully initialized dock-schedule
 ```
 
 

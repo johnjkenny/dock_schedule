@@ -1,0 +1,11 @@
+- name: Build Registry Service
+  ansible.builtin.command: docker compose build
+  args:
+    chdir: /opt/dock-schedule/registry
+  changed_when: true
+
+- name: Start Registry Service
+  ansible.builtin.command: docker stack deploy -c docker-compose.yml dock-schedule
+  args:
+    chdir: /opt/dock-schedule/registry
+  changed_when: true

@@ -1,0 +1,5 @@
+- name: Push docker images
+  ansible.builtin.command: docker compose --progress quiet push
+  args:
+    chdir: /opt/dock-schedule
+  changed_when: true

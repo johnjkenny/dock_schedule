@@ -50,7 +50,7 @@ class Init(Utils):
     def __create_swarm_dir_tree(self):
         self.log.info('Creating swarm directory tree')
         for path in ['ansible/playbooks', 'ansible/.env', 'broker/data', 'grafana/data', 'jobs', 'mongodb/data',
-                     'prometheus/data', 'certs']:
+                     'prometheus/data', 'registry/data', 'certs']:
             try:
                 Path('/opt/dock-schedule/' + path).mkdir(parents=True, exist_ok=True)
             except Exception:
@@ -138,7 +138,7 @@ class Init(Utils):
 
     def __generate_container_ssl_certs(self):
         for service in ['broker', 'grafana', 'mongodb', 'mongodb_scraper', 'prometheus', 'scheduler', 'node_scraper',
-                        'worker', 'proxy', 'proxy_scraper', 'container_scraper']:
+                        'worker', 'proxy', 'proxy_scraper', 'container_scraper', 'registry']:
             if not self.certs.create(service, [service, 'localhost', '127.0.0.1']):
                 self.log.error(f'Failed to create certificate for {service}')
                 return False
@@ -183,7 +183,7 @@ class Init(Utils):
                 return True
             if not self._run_cmd(f'rm -f {self.ansible_private_key}')[1]:
                 return False
-        return self._run_cmd(f'ssh-keygen -t rsa -b 4096 -f {self.ansible_private_key} -N ""')[1] and \
+        return self._run_cmd(f'ssh-keygen -t rsa -b 4096 -C "ansible" -f {self.ansible_private_key} -N ""')[1] and \
             self._run_cmd(f'chmod 400 {self.ansible_private_key}')[1]
 
     def __create_mongo_credentials(self):

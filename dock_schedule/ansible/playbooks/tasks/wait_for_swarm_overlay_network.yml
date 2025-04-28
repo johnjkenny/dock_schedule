@@ -1,0 +1,7 @@
+- name: Wait for registry service to propagate
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 5000
+    timeout: 60
+    delay: 5
+    state: started

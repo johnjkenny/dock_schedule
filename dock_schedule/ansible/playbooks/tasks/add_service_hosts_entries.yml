@@ -1,0 +1,14 @@
+- name: Add service host entries
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+    create: true
+    state: present
+    insertafter: EOF
+    mode: '0644'
+    owner: root
+    group: root
+  loop:
+    - "127.0.0.1  proxy"
+    - "127.0.0.1  mongodb"
+    - "127.0.0.1  registry"
