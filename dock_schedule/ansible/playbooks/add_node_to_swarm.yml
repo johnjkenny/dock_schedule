@@ -14,14 +14,8 @@
     - name: Get Swarm Join Token
       ansible.builtin.import_tasks: tasks/get_swarm_join_token.yml
 
-    - name: Create Grafana User
-      ansible.builtin.import_tasks: tasks/create_grafana_user.yml
-
-    - name: Create RabbitMQ User
-      ansible.builtin.import_tasks: tasks/create_rabbitmq_user.yml
-
-    - name: Create MongoDB User
-      ansible.builtin.import_tasks: tasks/create_mongodb_user.yml
+    - name: Create Service Users
+      ansible.builtin.import_tasks: tasks/create_service_users.yml
 
     - name: Add Swarm Firewall Rules
       ansible.builtin.import_tasks: tasks/add_swarm_firewall_rules.yml
@@ -35,14 +29,23 @@
     - name: Mount Swarm NFS Share
       ansible.builtin.import_tasks: tasks/mount_swarm_share.yml
 
+    - name: Create venv RC entry
+      ansible.builtin.import_tasks: tasks/create_venv_rc_entry.yml
+
     - name: Install Docker
       ansible.builtin.import_tasks: tasks/install_docker.yml
 
-    - name: Build Docker Swarm Services
-      ansible.builtin.import_tasks: tasks/build_containers.yml
+    - name: Set Service Host Entries
+      ansible.builtin.import_tasks: tasks/add_service_hosts_entries.yml
 
     - name: Join Swarm
       ansible.builtin.import_tasks: tasks/join_swarm.yml
+
+    - name: Wait for swarm overlay network
+      ansible.builtin.import_tasks: tasks/wait_for_swarm_overlay_network.yml
+
+    - name: Pull Docker Service Images
+      ansible.builtin.import_tasks: tasks/pull_docker_services.yml
 
     - name: Rebalance Swarm Services
       ansible.builtin.import_tasks: tasks/rebalance_swarm_services.yml

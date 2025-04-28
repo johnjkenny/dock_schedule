@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: dschedule_proxy:1.0.0
+    image: registry:5000/dschedule_proxy:1.0.0
     build: /opt/dock-schedule/proxy
     ports:
       - 80:80
@@ -25,7 +25,7 @@ services:
       retries: 3
 
   container_scraper:
-    image: dschedule_container_scraper:1.0.0
+    image: registry:5000/dschedule_container_scraper:1.0.0
     build: /opt/dock-schedule/container_scraper
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -54,7 +54,7 @@ services:
       - prometheus-job=container-stats
 
   proxy_scraper:
-    image: dschedule_proxy_scraper:1.0.0
+    image: registry:5000/dschedule_proxy_scraper:1.0.0
     build: /opt/dock-schedule/proxy_scraper
     networks:
       - dock-schedule-proxy
@@ -77,7 +77,7 @@ services:
       - prometheus-job=proxy-stats
 
   node_scraper:
-    image: dschedule_node_scraper:1.0.0
+    image: registry:5000/dschedule_node_scraper:1.0.0
     build: /opt/dock-schedule/node_scraper
     volumes:
       - /proc:/host/proc:ro
@@ -105,7 +105,7 @@ services:
       - prometheus-job=node-stats
 
   broker:
-    image: dschedule_broker:1.0.0
+    image: registry:5000/dschedule_broker:1.0.0
     build: /opt/dock-schedule/broker
     volumes:
       - /opt/dock-schedule/broker/data:/var/lib/rabbitmq
@@ -137,7 +137,7 @@ services:
       - prometheus-job=broker-stats
 
   prometheus:
-    image: dschedule_prometheus:1.0.0
+    image: registry:5000/dschedule_prometheus:1.0.0
     build: /opt/dock-schedule/prometheus
     user: root
     volumes:
@@ -165,7 +165,7 @@ services:
       retries: 3
 
   grafana:
-    image: dschedule_grafana:1.0.0
+    image: registry:5000/dschedule_grafana:1.0.0
     environment:
       - GF_LIVE_ENABLED=false
     build: /opt/dock-schedule/grafana
@@ -190,7 +190,7 @@ services:
       retries: 3
 
   mongodb:
-    image: dschedule_mongodb:1.0.0
+    image: registry:5000/dschedule_mongodb:1.0.0
     build: /opt/dock-schedule/mongodb
     volumes:
       - /opt/dock-schedule/mongodb/data:/data/db
@@ -219,7 +219,7 @@ services:
       retries: 3
 
   mongodb_scraper:
-    image: dschedule_mongodb_scraper:1.0.0
+    image: registry:5000/dschedule_mongodb_scraper:1.0.0
     build: /opt/dock-schedule/mongodb_scraper
     networks:
       - dock-schedule-job-db
@@ -246,7 +246,7 @@ services:
       - prometheus-job=mongo-stats
 
   scheduler:
-    image: dschedule_scheduler:1.0.0
+    image: registry:5000/dschedule_scheduler:1.0.0
     build: /opt/dock-schedule/scheduler
     volumes:
       - /opt/dock-schedule/jobs/crons.json:/app/crons.json
@@ -279,7 +279,7 @@ services:
       retries: 3
 
   worker:
-    image: dschedule_worker:1.0.0
+    image: registry:5000/dschedule_worker:1.0.0
     build: /opt/dock-schedule/worker
     volumes:
       - /opt/dock-schedule/ansible:/app/ansible

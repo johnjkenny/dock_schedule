@@ -7,6 +7,8 @@
     advertise_addr: "{{ ansible_default_ipv4.address }}"
     hostname: "{{ ansible_hostname }}"
   tasks:
+    - name: Create venv RC entry
+      ansible.builtin.import_tasks: tasks/create_venv_rc_entry.yml
 
     - name: Install NFS
       ansible.builtin.import_tasks: tasks/install_nfs.yml
@@ -26,8 +28,14 @@
     - name: Add Swarm Firewall Rules
       ansible.builtin.import_tasks: tasks/add_swarm_firewall_rules.yml
 
+    - name: Deploy Docker Registry Service
+      ansible.builtin.import_tasks: tasks/deploy_docker_registry_service.yml
+
     - name: Build Docker Swarm Services
-      ansible.builtin.import_tasks: tasks/build_containers.yml
+      ansible.builtin.import_tasks: tasks/build_docker_services.yml
+
+    - name: Push Docker Images to Registry
+      ansible.builtin.import_tasks: tasks/push_images_to_registry.yml
 
     - name: Start Swarm Services
       ansible.builtin.import_tasks: tasks/start_swarm_services.yml

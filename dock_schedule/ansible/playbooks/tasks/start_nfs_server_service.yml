@@ -5,7 +5,7 @@
     enabled: true
 
 - name: Parse Export Subnet
-  set_fact:
+  ansible.builtin.set_fact:
     export_subnet: "{{ advertise_addr | regex_replace('(\\d+)$', '0') }}/24"
 
 - name: Create Swarm-Share NFS Export
@@ -15,6 +15,9 @@
     state: present
     create: true
     insertafter: EOF
+    mode: '0644'
+    owner: root
+    group: root
 
 - name: Update NFS Exports
   ansible.builtin.command: exportfs -ra

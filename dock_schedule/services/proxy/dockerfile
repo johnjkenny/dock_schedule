@@ -1,4 +1,4 @@
-FROM nginx@sha256:babad783dca44e555a1d3892a462bc798b2eb3ac462be93da8bea9db344f8bbc
+FROM nginx@sha256:5ed8fcc66f4ed123c1b2560ed708dc148755b6e4cbd8b943fab094f2c6bfa91e
 
 COPY nginx.conf /etc/nginx/
 COPY docker-entrypoint.sh /custom-entrypoint.sh
