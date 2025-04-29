@@ -67,11 +67,11 @@ configuration files are copied from the git repository clone to this directory t
 service users, the directory tree, a certificate store to generate the TLS host and service certificates, generates
 ansible ssh keys, installs NFS, exports `/opt/dock-schedule` directory as a NFS share using the swarm manager subnet,
 installs docker, creates a docker swarm, creates the docker swarm networks and secrets for the services, installs
-firewalld and opens up the required NFS and Docker ports, builds the docker images, and then starts the swarm stack
-services.
+firewalld and opens up the required NFS and Docker ports, builds the docker images, pushes the images to the swarm
+registry and then starts the swarm stack services.
 
 The generated ansible private ssh key is `/opt/dock-schedule/ansible/.env/.ansible_rsa`. Ansible is used to configure
-new nodes added to the swarm cluster. You will need to the ansible public key
+new nodes added to the swarm cluster. You will need the ansible public key
 `/opt/dock-schedule/ansible/.env/.ansible_rsa.pub` to be added to the `~/.ssh/authorized_keys` on the ansible user of
 the new swam nodes you add to the cluster. You can either keep the generated ansible ssh keys and deploy the public key
 to new nodes or you can replace the ansible ssh keys with your own. The private and public keys are also used to run
@@ -830,7 +830,7 @@ dschedule -s -l -v
 
 2. Reload swarm service:
 You can reload a service using the `--reload` option. This will force the service to redeploy and remove the
-currently running container once the new container is in a healthy state. You can use the `--all` option to reload all
+currently running container once the new container is in a healthy state. You can use `all` to reload all
 services which is similar to running `--balance` option, but it will also reload the services that are pinned to the
 manager node as well as the global services which do not have an impact on the rebalancing efforts. You can use this
 method to basically clear the entire swarm state, but note, it takes quite awhile to reload all of the services.
@@ -1242,8 +1242,8 @@ dschedule -c -l
 ```
 
 3. Get Container stats:
-You can use the `--stats` option to get the container stats for a specific container or you can use the `--all` option
-to get stats for all containers on the local swarm node. The verbose option has no effect at this time.
+You can use the `--stats` option to get the container stats for a specific container or you can use `all` to get stats
+for all containers on the local swarm node. The verbose option has no effect at this time.
 
 
 ```bash
@@ -1355,19 +1355,145 @@ dschedule -c -w proxy.1
 ....
 ```
 
-
 # Jobs
 
-Create cron Job
+You can use the `--jobs` option to manage jobs. It includes the functionality to list, create, delete, and update
+scheduled jobs as well as get the results of jobs and run jobs manually with specified parameters.
+
+Command Options:
 ```bash
+dschedule -j -h
+usage: dschedule [-h] [-l] [-g ...] [-c ...] [-D DELETE] [-u ...] [-r ...] [-R ...] [-T]
+
+Dock Schedule: Jobs
+
+options:
+  -h, --help            show this help message and exit
+
+  -l, --list            List dock-schedule job schedule
+
+  -g ..., --get ...     Get dock-schedule job schedule
+
+  -c ..., --create ...  Create a dock-schedule job cron
+
+  -D DELETE, --delete DELETE
+                        Delete a dock-schedule job cron (specify job ID)
+
+  -u ..., --update ...  Update a dock-schedule job cron
+
+  -r ..., --run ...     Run a dock-schedule job (specify job name)
+
+  -R ..., --results ...
+                        Get the results of dock-schedule jobs
+
+  -T, --timezones       List all timezones available for dock-schedule jobs
+```
+
+1. Create cron Job
+
+You can create a cron job by using the `--create` option with the required parameters `--name`, `--type`, `--run`,
+`--frequency`, `--interval` or `--at`. The `interval` option will run the job every x frequency while the `at` option
+will run the job at a set time based on the frequency provided. `Interval` is based on when the scheduler service
+started and `at` is more percises on when it should run. You can use `--timezone` to specify the time to run the job
+with the `at` method. `--run` is the actual script or playbook to run and should be located on the export directory
+under either jobs/<type> or ansible/playbooks. The `--type` is the interpreter to use as well as the parent directory
+of the script or playbook. The `--args` options is used to pass arguments to the job script (not ansible playbook).
+Use `extraVars` to pass key-value pairs to the ansible playbook if `--type` is ansible. Use `--hostInventory` to run
+the ansible playbook on remote hosts or omit to run the job on the worker locally. The remote hosts must have the
+ansible public ssh key assigned to user ansible authorized keys as mentioned earlier. You can create a job that is
+disabled by using the `--disabled` option. Then you can enable it later by using the `--update` option.
+
+Every job type (python3, ansible, bash, php, node) has a test job created for you to test job successes and failures.
+You can use `--timezones` to list all timezones available for the `--at` option.
+
+
+Create Options:
+```bash
+dschedule -j -c -h
+usage: dschedule [-h] -n NAME -t {python3,ansible,bash,php,node} -r RUN [-a ARGS [ARGS ...]] -f
+                 {second,minute,hour,day} [-i INTERVAL] [-A AT] [-T TIMEZONE] [-H HOSTINVENTORY]
+                 [-e EXTRAVARS] [-d]
+
+Dock Schedule: Create Job Cron
+
+options:
+  -h, --help            show this help message and exit
+
+  -n NAME, --name NAME  Name of the job to create. Required to create a job cron
+
+  -t {python3,ansible,bash,php,node}, --type {python3,ansible,bash,php,node}
+                        Type of the job to create. Options: python3, ansible, bash, php, node
+
+  -r RUN, --run RUN     Name of script or playbook to run for the job. This should be located:
+                        /opt/dock-schedule/jobs/<type>/<run> for python3, bash, php, or node type.
+                        /opt/dock-schedule/ansible/playbooks/<run> for ansible type
+
+  -a ARGS [ARGS ...], --args ARGS [ARGS ...]
+                        Arguments to pass to the python3, bash, php or node script arg parser
+                        (example: "--arg1 value1", "--arg2 value2").
+
+  -f {second,minute,hour,day}, --frequency {second,minute,hour,day}
+                        Frequency to run the job. Options: second, minute, hour, day
+
+  -i INTERVAL, --interval INTERVAL
+                        Interval to run the job based on the frequency. Must set either interval or
+                        at, but not both. "at" will take precedence. Options: second frequency:
+                        1-infinity, minute frequency: 1-infinity, hour frequency: 1-infinity, day
+                        frequency: 1-infinity
+
+  -A AT, --at AT        The time to run the job based on the frequency. Must set either interval or
+                        at, but not both. "at" will take precedence. Options: minute frequency:
+                        ":SS", hour frequency: "MM:SS" or ":MM", day frequency: "HH:MM:SS" or
+                        "HH:MM"
+
+  -T TIMEZONE, --timezone TIMEZONE
+                        Timezone to run the job. Used in junction with "at". Default: UTC
+
+  -H HOSTINVENTORY, --hostInventory HOSTINVENTORY
+                        Host inventory to run remote ansible job on. Requires key=value pairs
+                        separated by comma: "hostname1=ip1, hostname2=ip2". Leave empty for the
+                        ansible job to run locally on the worker
+
+  -e EXTRAVARS, --extraVars EXTRAVARS
+                        Extra vars to pass to the ansible job. Requires key=value pairs separated by
+                        comma. "var1=value1, var2=value2". These will be directly used in the
+                        ansible playbook
+
+  -d, --disabled        If the job is disabled. This will cause the job to not run until it is
+                        enabled. Default: False
+```
+
+```bash
+# Create python test job that run every hour with arg '0' (success):
 dschedule -j -c -n Python-Test01 -t python3 -r test.py -a 0 -f hour -i 1 
 [2025-04-26 16:06:17,987][INFO][utils,343]: Job Python-Test01 created successfully
 
+# Create bash test job that runs every hour at the 30 min mark with arg '0' (success):
+dschedule -j -c -n Bash-Test01 -t bash -r test.sh -a 0 -f hour -A :30
+[2025-04-29 14:45:02,768][INFO][schedule,104]: Job Bash-Test01 created successfully
+
+# Create PHP test job that runs every day at 13:45 UTC with arg '1' (failure):
+dschedule -j -c -n PHP-Test01 -t php -r test.php -a 1 -f day -A 13:45
+[2025-04-29 14:47:53,406][INFO][schedule,104]: Job PHP-Test01 created successfully
+
+# Create JS test job that runs every day at 06:15 EST with arg '1' (failure):
+dschedule -j -c -n JS-Test01 -t node -r test.js -a 1 -f day -A 06:15 -T EST
+[2025-04-29 14:56:24,754][INFO][schedule,104]: Job JS-Test01 created successfully
+
+# Create ansible job that runs every minute with exit_code=0 (success):
+dschedule -j -c -n Ansible-Test01 -t ansible -r test.yml -f minute -i 5 -e exit_code=0
+[2025-04-29 14:58:58,791][INFO][schedule,104]: Job Ansible-Test01 created successfully
+
+```
+
+2. List job scheduls/crons:
+
+```bash
 dschedule -j -l
 Job Schedule:
 [
   {
-    "_id": "69112dee-97d0-47a9-9a5d-b63e3f15e51c",
+    "_id": "adf98018-5e91-4040-8b89-4e118eb8f2e5",
     "name": "Python-Test01",
     "type": "python3",
     "run": "test.py",
@@ -1381,16 +1507,425 @@ Job Schedule:
     "hostInventory": null,
     "extraVars": null,
     "disabled": false
+  },
+  {
+    "_id": "5ed41df4-1cd5-45b9-8567-1b8c85dba088",
+    "name": "Bash-Test01",
+    "type": "bash",
+    "run": "test.sh",
+    "args": [
+      "0"
+    ],
+    "frequency": "hour",
+    "interval": null,
+    "at": ":30",
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "bb9314a1-43a6-4c6c-89a6-887cbb47a770",
+    "name": "PHP-Test01",
+    "type": "php",
+    "run": "test.php",
+    "args": [
+      "1"
+    ],
+    "frequency": "day",
+    "interval": null,
+    "at": "13:45",
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "ead27b8d-a22f-4aa5-bc1b-73ccda7ca5b1",
+    "name": "JS-Test01",
+    "type": "node",
+    "run": "test.js",
+    "args": [
+      "1"
+    ],
+    "frequency": "day",
+    "interval": null,
+    "at": "06:15",
+    "timezone": "EST",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "af579395-1693-49b7-bf0d-a18c62773cbb",
+    "name": "Ansible-Test01",
+    "type": "ansible",
+    "run": "test.yml",
+    "args": null,
+    "frequency": "minute",
+    "interval": 5,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": {},
+    "extraVars": {
+      "exit_code": "0"
+    },
+    "disabled": false
+  }
+]
+```
+
+You can also use the `--get` option to get a specific job cron by name or ID. You can give multiple crons the same name
+but each must have a unique ID.
+
+```bash
+dschedule -j -g -n Ansible-Test01
+Job Schedule:
+[
+  {
+    "_id": "af579395-1693-49b7-bf0d-a18c62773cbb",
+    "name": "Ansible-Test01",
+    "type": "ansible",
+    "run": "test.yml",
+    "args": null,
+    "frequency": "minute",
+    "interval": 10,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": {},
+    "extraVars": {
+      "exit_code": "0"
+    },
+    "disabled": false
   }
 ]
 
+# Two jobs with the same name
+dschedule -j -g -n Python-Test01
+Job Schedule:
+[
+  {
+    "_id": "adf98018-5e91-4040-8b89-4e118eb8f2e5",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "frequency": "hour",
+    "interval": 1,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "6781d9a2-a369-43f7-a7a0-a7e6ff962eab",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "frequency": "minute",
+    "interval": 30,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  }
+]
+
+# Get by ID:
+dschedule -j -g -i 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+Job Schedule:
+{
+  "_id": "6781d9a2-a369-43f7-a7a0-a7e6ff962eab",
+  "name": "Python-Test01",
+  "type": "python3",
+  "run": "test.py",
+  "args": [
+    "0"
+  ],
+  "frequency": "minute",
+  "interval": 30,
+  "at": null,
+  "timezone": "UTC",
+  "hostInventory": null,
+  "extraVars": null,
+  "disabled": false
+}
 ```
 
-Run Job manually:
+3. Delete job schedule/cron:
+
+```bash
+# Delete JS-Test01
+dschedule -j -D ead27b8d-a22f-4aa5-bc1b-73ccda7ca5b1
+[2025-04-29 15:03:34,094][INFO][schedule,201]: Successfully deleted job ID ead27b8d-a22f-4aa5-bc1b-73ccda7ca5b1
+
+dschedule -j -l
+Job Schedule:
+[
+  {
+    "_id": "adf98018-5e91-4040-8b89-4e118eb8f2e5",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "frequency": "hour",
+    "interval": 1,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "5ed41df4-1cd5-45b9-8567-1b8c85dba088",
+    "name": "Bash-Test01",
+    "type": "bash",
+    "run": "test.sh",
+    "args": [
+      "0"
+    ],
+    "frequency": "hour",
+    "interval": null,
+    "at": ":30",
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "bb9314a1-43a6-4c6c-89a6-887cbb47a770",
+    "name": "PHP-Test01",
+    "type": "php",
+    "run": "test.php",
+    "args": [
+      "1"
+    ],
+    "frequency": "day",
+    "interval": null,
+    "at": "13:45",
+    "timezone": "UTC",
+    "hostInventory": null,
+    "extraVars": null,
+    "disabled": false
+  },
+  {
+    "_id": "af579395-1693-49b7-bf0d-a18c62773cbb",
+    "name": "Ansible-Test01",
+    "type": "ansible",
+    "run": "test.yml",
+    "args": null,
+    "frequency": "minute",
+    "interval": 5,
+    "at": null,
+    "timezone": "UTC",
+    "hostInventory": {},
+    "extraVars": {
+      "exit_code": "0"
+    },
+    "disabled": false
+  }
+]
+```
+
+4. Update job schedule/cron:
+
+
+Command options:
+```bash
+dschedule -j -u -h
+usage: dschedule [-h] -j JOBID [-n NAME] [-t {python3,ansible,bash,php,node,None}] [-r RUN]
+                 [-a ARGS [ARGS ...]] [-f {second,minute,hour,day,None}] [-i INTERVAL] [-A AT]
+                 [-T TIMEZONE] [-H HOSTINVENTORY] [-e EXTRAVARS] [-s {enabled,disabled,None}]
+
+Dock Schedule: Update Job Cron
+
+options:
+  -h, --help            show this help message and exit
+
+  -j JOBID, --jobID JOBID
+                        Job ID of the job to update. Required to update a job cron
+
+  -n NAME, --name NAME  New name for the cron job
+
+  -t {python3,ansible,bash,php,node,None}, --type {python3,ansible,bash,php,node,None}
+                        Job type update. Options: python3, ansible, bash, php, node
+
+  -r RUN, --run RUN     Job file to run. This should be located: /opt/dock-
+                        schedule/jobs/<type>/<run> for python3, bash, php, or node type. /opt/dock-
+                        schedule/ansible/playbooks/<run> for ansible type
+
+  -a ARGS [ARGS ...], --args ARGS [ARGS ...]
+                        Arguments to pass to the python3, bash, php or node script arg parser
+                        (example: "--arg1 value1", "--arg2 value2"). Include all args and not just
+                        the updated ones. Use "NONE" to remove all args.
+
+  -f {second,minute,hour,day,None}, --frequency {second,minute,hour,day,None}
+                        Frequency to run the job. Options: second, minute, hour, day
+
+  -i INTERVAL, --interval INTERVAL
+                        Interval to run the job based on the frequency. Must set either interval or
+                        at, but not both. "at" will take precedence. Options: second frequency:
+                        1-infinity, minute frequency: 1-infinity, hour frequency: 1-infinity, day
+                        frequency: 1-infinity. Use "None" to remove.
+
+  -A AT, --at AT        The time to run the job based on the frequency. Must set either interval or
+                        at, but not both. "at" will take precedence. Options: minute frequency:
+                        ":SS", hour frequency: "MM:SS" or ":MM", day frequency: "HH:MM:SS" or
+                        "HH:MM". Use "None" to remove.
+
+  -T TIMEZONE, --timezone TIMEZONE
+                        Timezone to run the job. Used in junction with "at"
+
+  -H HOSTINVENTORY, --hostInventory HOSTINVENTORY
+                        Host inventory to run remote ansible job on. Requires key=value pairs
+                        separated by comma: "hostname1=ip1, hostname2=ip2". Use "None" to remove and
+                        use localhost.
+
+  -e EXTRAVARS, --extraVars EXTRAVARS
+                        Extra vars to pass to the ansible job. Requires key=value pairs separated by
+                        comma. "var1=value1, var2=value2". Include all expected key values and not
+                        just the updated ones
+
+  -s {enabled,disabled,None}, --state {enabled,disabled,None}
+                        State of the cron job. Options: enabled, disabled
+```
+
+```bash
+# Disable a job:
+dschedule -j -u -j 6781d9a2-a369-43f7-a7a0-a7e6ff962eab -s disabled
+[2025-04-29 15:20:33,512][INFO][schedule,259]: Successfully updated job ID 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+
+dschedule -j -g -i 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+Job Schedule:
+{
+  "_id": "6781d9a2-a369-43f7-a7a0-a7e6ff962eab",
+  "name": "Python-Test01",
+  "type": "python3",
+  "run": "test.py",
+  "args": [
+    "0"
+  ],
+  "frequency": "minute",
+  "interval": 30,
+  "at": null,
+  "timezone": "UTC",
+  "hostInventory": null,
+  "extraVars": null,
+  "disabled": true
+}
+
+# update the frequency and interval to run two hours from every 30 minutes:
+dschedule -j -u -j 6781d9a2-a369-43f7-a7a0-a7e6ff962eab -f hour -i 2
+[2025-04-29 15:22:35,986][INFO][schedule,259]: Successfully updated job ID 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+
+dschedule -j -g -i 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+Job Schedule:
+{
+  "_id": "6781d9a2-a369-43f7-a7a0-a7e6ff962eab",
+  "name": "Python-Test01",
+  "type": "python3",
+  "run": "test.py",
+  "args": [
+    "0"
+  ],
+  "frequency": "hour",
+  "interval": 2,
+  "at": null,
+  "timezone": "UTC",
+  "hostInventory": null,
+  "extraVars": null,
+  "disabled": true
+}
+
+
+# Update to run every day at 12:42 EST
+dschedule -j -u -j 6781d9a2-a369-43f7-a7a0-a7e6ff962eab -f day -A 12:42 -i None -T EST
+[2025-04-29 15:25:52,372][INFO][schedule,259]: Successfully updated job ID 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+
+dschedule -j -g -i 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+Job Schedule:
+{
+  "_id": "6781d9a2-a369-43f7-a7a0-a7e6ff962eab",
+  "name": "Python-Test01",
+  "type": "python3",
+  "run": "test.py",
+  "args": [
+    "0"
+  ],
+  "frequency": "day",
+  "interval": null,
+  "at": "12:42",
+  "timezone": "EST",
+  "hostInventory": null,
+  "extraVars": null,
+  "disabled": true
+}
+
+# update the name, type, run, args and state to enabled:
+dschedule -j -u -j 6781d9a2-a369-43f7-a7a0-a7e6ff962eab -n NewName -t bash -r test.sh -a 1 -s enabled
+[2025-04-29 15:33:16,744][INFO][schedule,259]: Successfully updated job ID 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+
+dschedule -j -g -i 6781d9a2-a369-43f7-a7a0-a7e6ff962eab
+Job Schedule:
+{
+  "_id": "6781d9a2-a369-43f7-a7a0-a7e6ff962eab",
+  "name": "NewName",
+  "type": "bash",
+  "run": "test.sh",
+  "args": [
+    "1"
+  ],
+  "frequency": "day",
+  "interval": null,
+  "at": "12:42",
+  "timezone": "EST",
+  "hostInventory": null,
+  "extraVars": null,
+  "disabled": false
+}
+
+# Update ansible host inventory and extra vars:
+dschedule -j -u -j af579395-1693-49b7-bf0d-a18c62773cbb -e exit_code=1 -H node1=192.168.6.2,node2=192.168.6.3
+[2025-04-29 15:35:49,129][INFO][schedule,259]: Successfully updated job ID af579395-1693-49b7-bf0d-a18c62773cbb
+
+dschedule -j -g -i af579395-1693-49b7-bf0d-a18c62773cbb
+Job Schedule:
+{
+  "_id": "af579395-1693-49b7-bf0d-a18c62773cbb",
+  "name": "Ansible-Test01",
+  "type": "ansible",
+  "run": "test.yml",
+  "args": null,
+  "frequency": "minute",
+  "interval": 10,
+  "at": null,
+  "timezone": "UTC",
+  "hostInventory": {
+    "node1": "192.168.6.2",
+    "node2": "192.168.6.3"
+  },
+  "extraVars": {
+    "exit_code": "1"
+  },
+  "disabled": false
+}
+```
+
+5. Run job manually:
+
 You can manually run jobs using the `--run` option. This will create a new job and send it to the scheduler. The scheduler
 probes the manual jobs every 5 seconds so there may be a delay in the job execution especially if the job queue is
-already backlogged. You can wait for the job to complete using the `--wait` option of desired. You can select to run
-a predefined cron job using the `--id` options and providing the the job cron ID to run. You can also specify the job
+already backlogged. You can wait for the job to complete using the `--wait` option if desired. You can select to run
+a predefined cron job using the `--id` option and providing the the job ID to run. You can also specify the job
 parameters for the manual run similar to creating a cron job using the `--create` minus the frequency the job should
 run.
 

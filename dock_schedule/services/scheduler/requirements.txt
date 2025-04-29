@@ -1,4 +1,5 @@
 dnspython==2.7.0
 pika==1.3.2
 pymongo==4.12.0
+pytz==2025.2
 schedule==1.2.2

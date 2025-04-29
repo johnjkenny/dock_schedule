@@ -284,6 +284,8 @@ def parse_job_args(args: dict):
         return run_job(args['run'])
     if args.get('results'):
         return job_results(args['results'])
+    if args.get('timezones'):
+        return Schedule().get_timezone_options()
     return True
 
 
@@ -296,7 +298,7 @@ def jobs(parent_args: list = None):
         },
         'get': {
             'short': 'g',
-            'help': 'Get dock-schedule job schedule (specify job name)',
+            'help': 'Get dock-schedule job schedule',
             'nargs': REMAINDER
         },
         'create': {
@@ -322,6 +324,11 @@ def jobs(parent_args: list = None):
             'short': 'R',
             'help': 'Get the results of dock-schedule jobs',
             'nargs': REMAINDER,
+        },
+        'timezones': {
+            'short': 'T',
+            'help': 'List all timezones available for dock-schedule jobs',
+            'action': 'store_true'
         }
     }).set_arguments()
     if not parse_job_args(args):
