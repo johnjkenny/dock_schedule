@@ -188,7 +188,7 @@ class Schedule(Utils):
     def get_timezone_options(self):
         zones = list(all_timezones_set)
         zones.sort()
-        return self._display_info(f'Must be one of: {json.dumps(zones, indent=2)}')
+        return self._display_info(f'Timezone Options:\n{json.dumps(zones, indent=2)}')
 
     def delete_cron_job(self, job_id: str):
         if len(job_id) != 36:
