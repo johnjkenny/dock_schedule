@@ -2028,3 +2028,1036 @@ dschedule -j -r -t ansible -r test.yml -e exit_code=1 -w
 [2025-04-26 17:27:24,828][INFO][utils,601]: Job manual-ansible-test.yml sent to scheduler successfully. Waiting for completion...
 [2025-04-26 17:27:29,830][ERROR][utils,567]: Job failed: Task 'Fail if exit_code is not 0' failed on host 'localhost': Invalid exit code: 1
 ```
+
+6. Results
+
+You can use the `--results` option to pull job result data as well as get the backlog of pending jobs to help you
+determine if you need to scale your workers. You can either use `--id` to get a specific job result or `--name` to get
+all jobs that have run with the given name. Use `all` with `--name` to get all jobs that have run. Use `--limit` to
+limit the returned result quantity. You can also use `--filter` to filter job results by job status. Success will give
+you all jobs that have exited with a 0 exit code. Failed will give you all jobs that have exited with a non-zero exit
+code. Scheduled will give you all jobs sitting in the queue waiting for a worker to acknowledge the job. Use `--verbose`
+to get more detailed output of the job results. The job results are stored in the database and will be autodeleted after
+7 days.
+
+
+```bash
+Commands Options:
+```bash
+dschedule -j -R -h
+usage: dschedule [-h] [-i ID] [-n NAME] [-l LIMIT] [-f {success,failed,scheduled}] [-v]
+
+Dock Schedule: Run Job
+
+options:
+  -h, --help            show this help message and exit
+
+  -i ID, --id ID        ID of the job to get results for
+
+  -n NAME, --name NAME  Job name to query. Use "all" to get all jobs.
+
+  -l LIMIT, --limit LIMIT
+                        Limit the number of job results to return. Default: 10
+
+  -f {success,failed,scheduled}, --filter {success,failed,scheduled}
+                        Filter the job results by status. Options: success, failed, scheduled
+
+  -v, --verbose         Enable verbose output
+```
+
+```bash
+# get the results of the last 15 jobs that have run:
+dschedule -j -R -n all -l 15
+ID: 208947c9-b239-40e6-b430-76aae2efc0d6, Name: Bash-Test01, State: completed, Result: True, Duration: 725 ms
+
+ID: 61d032f2-011e-44fb-8be3-2167ce61e26f, Name: Python-Test01, State: completed, Result: True, Duration: 756 ms
+
+ID: 666e06c9-483d-4631-9c93-10c0cb2dc7f7, Name: Bash-Test01, State: completed, Result: True, Duration: 749 ms
+
+ID: 95681059-1c8b-435d-bbd0-7cee793d1d33, Name: Bash-Test01, State: completed, Result: True, Duration: 721 ms
+
+ID: b5050bd7-1165-4078-9e7f-fc9b5925522d, Name: Python-Test01, State: completed, Result: True, Duration: 734 ms
+
+ID: ed70c33d-d465-47f9-b97a-233588029b7b, Name: Bash-Test01, State: completed, Result: True, Duration: 626 ms
+
+ID: d5778bb4-fb8a-496b-9e9d-9a3faf2a6366, Name: Python-Test01, State: completed, Result: True, Duration: 681 ms
+
+ID: 4c8ae96f-9226-4338-97cf-6fbaeed35abc, Name: Python-Test01, State: completed, Result: True, Duration: 695 ms
+
+ID: c3b1a345-17d3-4725-8726-7778282135c4, Name: Ansible-Test01, State: completed, Result: False, Duration: 542 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+ID: a13df419-d368-4b74-a491-ba4c29c6c090, Name: Ansible-Test01, State: completed, Result: False, Duration: 473 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+ID: 68c844b7-fe5e-4e7b-9c70-ef3d4c80acdc, Name: Bash-Test01, State: completed, Result: True, Duration: 677 ms
+
+ID: 42f4385b-65a3-4b40-811d-a461713b54ba, Name: Ansible-Test01, State: completed, Result: False, Duration: 520 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+ID: 49840eb6-b275-49c5-a001-3df1fd1941c4, Name: Python-Test01, State: completed, Result: True, Duration: 753 ms
+
+ID: 62947b78-ab89-47ae-90d3-0c4469759606, Name: Ansible-Test01, State: completed, Result: False, Duration: 509 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+ID: 8566559a-34aa-4572-b4df-bab966501179, Name: Ansible-Test01, State: completed, Result: False, Duration: 506 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+
+# Verbose output example of last 5 jobs run:
+dschedule -j -R -n all -v -l 5
+Job Results:
+[
+  {
+    "_id": "d64f1b4a-84f0-4889-a7c7-06ad8afc9843",
+    "name": "Bash-Test01",
+    "type": "bash",
+    "run": "test.sh",
+    "args": [
+      "0"
+    ],
+    "hostInventory": null,
+    "extraVars": {
+      "script_file": "test.sh",
+      "script_type": "bash",
+      "script_args": [
+        "0"
+      ]
+    },
+    "state": "completed",
+    "scheduled": "2025-04-29T20:11:42.205442",
+    "start": "2025-04-29T20:11:43.444000",
+    "end": "2025-04-29T20:11:44.133000",
+    "result": true,
+    "error": null,
+    "expiryTime": "2025-05-06T20:11:42.205000"
+  },
+  {
+    "_id": "4dedc3ac-dfc9-45db-a14c-c6ed6792c66a",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "hostInventory": null,
+    "extraVars": {
+      "script_file": "test.py",
+      "script_type": "python3",
+      "script_args": [
+        "0"
+      ]
+    },
+    "state": "completed",
+    "scheduled": "2025-04-29T20:11:42.201615",
+    "start": "2025-04-29T20:11:42.675000",
+    "end": "2025-04-29T20:11:43.439000",
+    "result": true,
+    "error": null,
+    "expiryTime": "2025-05-06T20:11:42.204000"
+  },
+  {
+    "_id": "2c964aa9-0360-4061-9ce4-b67277e07104",
+    "name": "Ansible-Test01",
+    "type": "ansible",
+    "run": "test.yml",
+    "args": null,
+    "hostInventory": {
+      "node1": "192.168.6.2",
+      "node2": "192.168.6.3"
+    },
+    "extraVars": {
+      "exit_code": "1"
+    },
+    "state": "completed",
+    "scheduled": "2025-04-29T20:11:42.198720",
+    "start": "2025-04-29T20:11:42.204000",
+    "end": "2025-04-29T20:11:42.667000",
+    "result": false,
+    "error": "Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1",
+    "expiryTime": "2025-05-06T20:11:42.199000"
+  },
+  {
+    "_id": "3435270c-64a2-47b3-9bd3-ff0846e7acad",
+    "name": "Bash-Test01",
+    "type": "bash",
+    "run": "test.sh",
+    "args": [
+      "0"
+    ],
+    "hostInventory": null,
+    "extraVars": {
+      "script_file": "test.sh",
+      "script_type": "bash",
+      "script_args": [
+        "0"
+      ]
+    },
+    "state": "completed",
+    "scheduled": "2025-04-29T20:06:42.009045",
+    "start": "2025-04-29T20:06:42.701000",
+    "end": "2025-04-29T20:06:43.383000",
+    "result": true,
+    "error": null,
+    "expiryTime": "2025-05-06T20:06:42.010000"
+  },
+  {
+    "_id": "d0d0a66b-300a-47fa-978f-fa115d02c2b1",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "hostInventory": null,
+    "extraVars": {
+      "script_file": "test.py",
+      "script_type": "python3",
+      "script_args": [
+        "0"
+      ]
+    },
+    "state": "completed",
+    "scheduled": "2025-04-29T20:06:42.005947",
+    "start": "2025-04-29T20:06:42.012000",
+    "end": "2025-04-29T20:06:42.695000",
+    "result": true,
+    "error": null,
+    "expiryTime": "2025-05-06T20:06:42.006000"
+  }
+]
+
+# get last three results of a named job:
+dschedule -j -R -n Python-Test01 -l 3
+ID: 15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0, Name: Python-Test01, State: completed, Result: True, Duration: 677 ms
+
+ID: 4dedc3ac-dfc9-45db-a14c-c6ed6792c66a, Name: Python-Test01, State: completed, Result: True, Duration: 764 ms
+
+ID: d0d0a66b-300a-47fa-978f-fa115d02c2b1, Name: Python-Test01, State: completed, Result: True, Duration: 683 ms
+
+# get details results a specific job:
+dschedule -j -R -i 15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0 -v
+Job Results:
+[
+  {
+    "_id": "15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "hostInventory": null,
+    "extraVars": {
+      "script_file": "test.py",
+      "script_type": "python3",
+      "script_args": [
+        "0"
+      ]
+    },
+    "state": "completed",
+    "scheduled": "2025-04-29T20:16:42.386141",
+    "start": "2025-04-29T20:16:42.394000",
+    "end": "2025-04-29T20:16:43.071000",
+    "result": true,
+    "error": null,
+    "expiryTime": "2025-05-06T20:16:42.386000"
+  }
+]
+
+# Get the last 3 failed jobs:
+dschedule -j -R -n all -f failed -l 3
+ID: 2c964aa9-0360-4061-9ce4-b67277e07104, Name: Ansible-Test01, State: completed, Result: False, Duration: 463 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+ID: c3b1a345-17d3-4725-8726-7778282135c4, Name: Ansible-Test01, State: completed, Result: False, Duration: 542 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+ID: a13df419-d368-4b74-a491-ba4c29c6c090, Name: Ansible-Test01, State: completed, Result: False, Duration: 473 ms
+  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+
+# Get the last 3 success jobs:
+dschedule -j -R -n all -f success -l 3
+ID: 84f19ebe-c85b-45d7-b1e7-8bda8b087410, Name: Bash-Test01, State: completed, Result: True, Duration: 646 ms
+
+ID: 15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0, Name: Python-Test01, State: completed, Result: True, Duration: 677 ms
+
+ID: d64f1b4a-84f0-4889-a7c7-06ad8afc9843, Name: Bash-Test01, State: completed, Result: True, Duration: 689 ms
+
+# Get the scheduled jobs (10 results by default, but more might be pending, use -l to get full list):
+dschedule -j -R -n all -f scheduled
+ID: 97df3b00-ad79-4540-90a1-e7763d0ea684, Name: Bash-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 8d7aea68-8c8e-4fcc-b1d7-8a42965f1e64, Name: Python-Test01, State: pending, Result: None, Duration: N/A
+
+ID: cd080228-9e29-405c-becb-6766e1e0cbcc, Name: Bash-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 009ca495-7434-4f40-a2a2-884efabd0fd7, Name: Python-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 8039f6e6-c01e-409c-b8c9-b758fbc16d25, Name: Bash-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 6677a58b-86d1-489d-a3ff-1e439352bf36, Name: Python-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 1eeab812-7127-42e7-afeb-98bc78299138, Name: Bash-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 7a4daaae-160c-4096-9d9d-a27d98fe12a8, Name: Python-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 9cbaf507-9ef7-4f9b-a9f4-9a49f5c4515a, Name: Bash-Test01, State: pending, Result: None, Duration: N/A
+
+ID: 9e363af0-c7dd-4929-960c-ac51d062ebc9, Name: Python-Test01, State: pending, Result: None, Duration: N/A
+# This is a good indicator that you need to scale your workers to handle the job load
+```
+
+7. Available Timezones to schedule jobs:
+
+The available timezones are the same as pytzm but you can list them for a quick reference using `--timezones`
+
+```bash
+dschedule -j -T
+Timezone Options:
+[
+  "Africa/Abidjan",
+  "Africa/Accra",
+  "Africa/Addis_Ababa",
+  "Africa/Algiers",
+  "Africa/Asmara",
+  "Africa/Asmera",
+  "Africa/Bamako",
+  "Africa/Bangui",
+  "Africa/Banjul",
+  "Africa/Bissau",
+  "Africa/Blantyre",
+  "Africa/Brazzaville",
+  "Africa/Bujumbura",
+  "Africa/Cairo",
+  "Africa/Casablanca",
+  "Africa/Ceuta",
+  "Africa/Conakry",
+  "Africa/Dakar",
+  "Africa/Dar_es_Salaam",
+  "Africa/Djibouti",
+  "Africa/Douala",
+  "Africa/El_Aaiun",
+  "Africa/Freetown",
+  "Africa/Gaborone",
+  "Africa/Harare",
+  "Africa/Johannesburg",
+  "Africa/Juba",
+  "Africa/Kampala",
+  "Africa/Khartoum",
+  "Africa/Kigali",
+  "Africa/Kinshasa",
+  "Africa/Lagos",
+  "Africa/Libreville",
+  "Africa/Lome",
+  "Africa/Luanda",
+  "Africa/Lubumbashi",
+  "Africa/Lusaka",
+  "Africa/Malabo",
+  "Africa/Maputo",
+  "Africa/Maseru",
+  "Africa/Mbabane",
+  "Africa/Mogadishu",
+  "Africa/Monrovia",
+  "Africa/Nairobi",
+  "Africa/Ndjamena",
+  "Africa/Niamey",
+  "Africa/Nouakchott",
+  "Africa/Ouagadougou",
+  "Africa/Porto-Novo",
+  "Africa/Sao_Tome",
+  "Africa/Timbuktu",
+  "Africa/Tripoli",
+  "Africa/Tunis",
+  "Africa/Windhoek",
+  "America/Adak",
+  "America/Anchorage",
+  "America/Anguilla",
+  "America/Antigua",
+  "America/Araguaina",
+  "America/Argentina/Buenos_Aires",
+  "America/Argentina/Catamarca",
+  "America/Argentina/ComodRivadavia",
+  "America/Argentina/Cordoba",
+  "America/Argentina/Jujuy",
+  "America/Argentina/La_Rioja",
+  "America/Argentina/Mendoza",
+  "America/Argentina/Rio_Gallegos",
+  "America/Argentina/Salta",
+  "America/Argentina/San_Juan",
+  "America/Argentina/San_Luis",
+  "America/Argentina/Tucuman",
+  "America/Argentina/Ushuaia",
+  "America/Aruba",
+  "America/Asuncion",
+  "America/Atikokan",
+  "America/Atka",
+  "America/Bahia",
+  "America/Bahia_Banderas",
+  "America/Barbados",
+  "America/Belem",
+  "America/Belize",
+  "America/Blanc-Sablon",
+  "America/Boa_Vista",
+  "America/Bogota",
+  "America/Boise",
+  "America/Buenos_Aires",
+  "America/Cambridge_Bay",
+  "America/Campo_Grande",
+  "America/Cancun",
+  "America/Caracas",
+  "America/Catamarca",
+  "America/Cayenne",
+  "America/Cayman",
+  "America/Chicago",
+  "America/Chihuahua",
+  "America/Ciudad_Juarez",
+  "America/Coral_Harbour",
+  "America/Cordoba",
+  "America/Costa_Rica",
+  "America/Coyhaique",
+  "America/Creston",
+  "America/Cuiaba",
+  "America/Curacao",
+  "America/Danmarkshavn",
+  "America/Dawson",
+  "America/Dawson_Creek",
+  "America/Denver",
+  "America/Detroit",
+  "America/Dominica",
+  "America/Edmonton",
+  "America/Eirunepe",
+  "America/El_Salvador",
+  "America/Ensenada",
+  "America/Fort_Nelson",
+  "America/Fort_Wayne",
+  "America/Fortaleza",
+  "America/Glace_Bay",
+  "America/Godthab",
+  "America/Goose_Bay",
+  "America/Grand_Turk",
+  "America/Grenada",
+  "America/Guadeloupe",
+  "America/Guatemala",
+  "America/Guayaquil",
+  "America/Guyana",
+  "America/Halifax",
+  "America/Havana",
+  "America/Hermosillo",
+  "America/Indiana/Indianapolis",
+  "America/Indiana/Knox",
+  "America/Indiana/Marengo",
+  "America/Indiana/Petersburg",
+  "America/Indiana/Tell_City",
+  "America/Indiana/Vevay",
+  "America/Indiana/Vincennes",
+  "America/Indiana/Winamac",
+  "America/Indianapolis",
+  "America/Inuvik",
+  "America/Iqaluit",
+  "America/Jamaica",
+  "America/Jujuy",
+  "America/Juneau",
+  "America/Kentucky/Louisville",
+  "America/Kentucky/Monticello",
+  "America/Knox_IN",
+  "America/Kralendijk",
+  "America/La_Paz",
+  "America/Lima",
+  "America/Los_Angeles",
+  "America/Louisville",
+  "America/Lower_Princes",
+  "America/Maceio",
+  "America/Managua",
+  "America/Manaus",
+  "America/Marigot",
+  "America/Martinique",
+  "America/Matamoros",
+  "America/Mazatlan",
+  "America/Mendoza",
+  "America/Menominee",
+  "America/Merida",
+  "America/Metlakatla",
+  "America/Mexico_City",
+  "America/Miquelon",
+  "America/Moncton",
+  "America/Monterrey",
+  "America/Montevideo",
+  "America/Montreal",
+  "America/Montserrat",
+  "America/Nassau",
+  "America/New_York",
+  "America/Nipigon",
+  "America/Nome",
+  "America/Noronha",
+  "America/North_Dakota/Beulah",
+  "America/North_Dakota/Center",
+  "America/North_Dakota/New_Salem",
+  "America/Nuuk",
+  "America/Ojinaga",
+  "America/Panama",
+  "America/Pangnirtung",
+  "America/Paramaribo",
+  "America/Phoenix",
+  "America/Port-au-Prince",
+  "America/Port_of_Spain",
+  "America/Porto_Acre",
+  "America/Porto_Velho",
+  "America/Puerto_Rico",
+  "America/Punta_Arenas",
+  "America/Rainy_River",
+  "America/Rankin_Inlet",
+  "America/Recife",
+  "America/Regina",
+  "America/Resolute",
+  "America/Rio_Branco",
+  "America/Rosario",
+  "America/Santa_Isabel",
+  "America/Santarem",
+  "America/Santiago",
+  "America/Santo_Domingo",
+  "America/Sao_Paulo",
+  "America/Scoresbysund",
+  "America/Shiprock",
+  "America/Sitka",
+  "America/St_Barthelemy",
+  "America/St_Johns",
+  "America/St_Kitts",
+  "America/St_Lucia",
+  "America/St_Thomas",
+  "America/St_Vincent",
+  "America/Swift_Current",
+  "America/Tegucigalpa",
+  "America/Thule",
+  "America/Thunder_Bay",
+  "America/Tijuana",
+  "America/Toronto",
+  "America/Tortola",
+  "America/Vancouver",
+  "America/Virgin",
+  "America/Whitehorse",
+  "America/Winnipeg",
+  "America/Yakutat",
+  "America/Yellowknife",
+  "Antarctica/Casey",
+  "Antarctica/Davis",
+  "Antarctica/DumontDUrville",
+  "Antarctica/Macquarie",
+  "Antarctica/Mawson",
+  "Antarctica/McMurdo",
+  "Antarctica/Palmer",
+  "Antarctica/Rothera",
+  "Antarctica/South_Pole",
+  "Antarctica/Syowa",
+  "Antarctica/Troll",
+  "Antarctica/Vostok",
+  "Arctic/Longyearbyen",
+  "Asia/Aden",
+  "Asia/Almaty",
+  "Asia/Amman",
+  "Asia/Anadyr",
+  "Asia/Aqtau",
+  "Asia/Aqtobe",
+  "Asia/Ashgabat",
+  "Asia/Ashkhabad",
+  "Asia/Atyrau",
+  "Asia/Baghdad",
+  "Asia/Bahrain",
+  "Asia/Baku",
+  "Asia/Bangkok",
+  "Asia/Barnaul",
+  "Asia/Beirut",
+  "Asia/Bishkek",
+  "Asia/Brunei",
+  "Asia/Calcutta",
+  "Asia/Chita",
+  "Asia/Choibalsan",
+  "Asia/Chongqing",
+  "Asia/Chungking",
+  "Asia/Colombo",
+  "Asia/Dacca",
+  "Asia/Damascus",
+  "Asia/Dhaka",
+  "Asia/Dili",
+  "Asia/Dubai",
+  "Asia/Dushanbe",
+  "Asia/Famagusta",
+  "Asia/Gaza",
+  "Asia/Harbin",
+  "Asia/Hebron",
+  "Asia/Ho_Chi_Minh",
+  "Asia/Hong_Kong",
+  "Asia/Hovd",
+  "Asia/Irkutsk",
+  "Asia/Istanbul",
+  "Asia/Jakarta",
+  "Asia/Jayapura",
+  "Asia/Jerusalem",
+  "Asia/Kabul",
+  "Asia/Kamchatka",
+  "Asia/Karachi",
+  "Asia/Kashgar",
+  "Asia/Kathmandu",
+  "Asia/Katmandu",
+  "Asia/Khandyga",
+  "Asia/Kolkata",
+  "Asia/Krasnoyarsk",
+  "Asia/Kuala_Lumpur",
+  "Asia/Kuching",
+  "Asia/Kuwait",
+  "Asia/Macao",
+  "Asia/Macau",
+  "Asia/Magadan",
+  "Asia/Makassar",
+  "Asia/Manila",
+  "Asia/Muscat",
+  "Asia/Nicosia",
+  "Asia/Novokuznetsk",
+  "Asia/Novosibirsk",
+  "Asia/Omsk",
+  "Asia/Oral",
+  "Asia/Phnom_Penh",
+  "Asia/Pontianak",
+  "Asia/Pyongyang",
+  "Asia/Qatar",
+  "Asia/Qostanay",
+  "Asia/Qyzylorda",
+  "Asia/Rangoon",
+  "Asia/Riyadh",
+  "Asia/Saigon",
+  "Asia/Sakhalin",
+  "Asia/Samarkand",
+  "Asia/Seoul",
+  "Asia/Shanghai",
+  "Asia/Singapore",
+  "Asia/Srednekolymsk",
+  "Asia/Taipei",
+  "Asia/Tashkent",
+  "Asia/Tbilisi",
+  "Asia/Tehran",
+  "Asia/Tel_Aviv",
+  "Asia/Thimbu",
+  "Asia/Thimphu",
+  "Asia/Tokyo",
+  "Asia/Tomsk",
+  "Asia/Ujung_Pandang",
+  "Asia/Ulaanbaatar",
+  "Asia/Ulan_Bator",
+  "Asia/Urumqi",
+  "Asia/Ust-Nera",
+  "Asia/Vientiane",
+  "Asia/Vladivostok",
+  "Asia/Yakutsk",
+  "Asia/Yangon",
+  "Asia/Yekaterinburg",
+  "Asia/Yerevan",
+  "Atlantic/Azores",
+  "Atlantic/Bermuda",
+  "Atlantic/Canary",
+  "Atlantic/Cape_Verde",
+  "Atlantic/Faeroe",
+  "Atlantic/Faroe",
+  "Atlantic/Jan_Mayen",
+  "Atlantic/Madeira",
+  "Atlantic/Reykjavik",
+  "Atlantic/South_Georgia",
+  "Atlantic/St_Helena",
+  "Atlantic/Stanley",
+  "Australia/ACT",
+  "Australia/Adelaide",
+  "Australia/Brisbane",
+  "Australia/Broken_Hill",
+  "Australia/Canberra",
+  "Australia/Currie",
+  "Australia/Darwin",
+  "Australia/Eucla",
+  "Australia/Hobart",
+  "Australia/LHI",
+  "Australia/Lindeman",
+  "Australia/Lord_Howe",
+  "Australia/Melbourne",
+  "Australia/NSW",
+  "Australia/North",
+  "Australia/Perth",
+  "Australia/Queensland",
+  "Australia/South",
+  "Australia/Sydney",
+  "Australia/Tasmania",
+  "Australia/Victoria",
+  "Australia/West",
+  "Australia/Yancowinna",
+  "Brazil/Acre",
+  "Brazil/DeNoronha",
+  "Brazil/East",
+  "Brazil/West",
+  "CET",
+  "CST6CDT",
+  "Canada/Atlantic",
+  "Canada/Central",
+  "Canada/Eastern",
+  "Canada/Mountain",
+  "Canada/Newfoundland",
+  "Canada/Pacific",
+  "Canada/Saskatchewan",
+  "Canada/Yukon",
+  "Chile/Continental",
+  "Chile/EasterIsland",
+  "Cuba",
+  "EET",
+  "EST",
+  "EST5EDT",
+  "Egypt",
+  "Eire",
+  "Etc/GMT",
+  "Etc/GMT+0",
+  "Etc/GMT+1",
+  "Etc/GMT+10",
+  "Etc/GMT+11",
+  "Etc/GMT+12",
+  "Etc/GMT+2",
+  "Etc/GMT+3",
+  "Etc/GMT+4",
+  "Etc/GMT+5",
+  "Etc/GMT+6",
+  "Etc/GMT+7",
+  "Etc/GMT+8",
+  "Etc/GMT+9",
+  "Etc/GMT-0",
+  "Etc/GMT-1",
+  "Etc/GMT-10",
+  "Etc/GMT-11",
+  "Etc/GMT-12",
+  "Etc/GMT-13",
+  "Etc/GMT-14",
+  "Etc/GMT-2",
+  "Etc/GMT-3",
+  "Etc/GMT-4",
+  "Etc/GMT-5",
+  "Etc/GMT-6",
+  "Etc/GMT-7",
+  "Etc/GMT-8",
+  "Etc/GMT-9",
+  "Etc/GMT0",
+  "Etc/Greenwich",
+  "Etc/UCT",
+  "Etc/UTC",
+  "Etc/Universal",
+  "Etc/Zulu",
+  "Europe/Amsterdam",
+  "Europe/Andorra",
+  "Europe/Astrakhan",
+  "Europe/Athens",
+  "Europe/Belfast",
+  "Europe/Belgrade",
+  "Europe/Berlin",
+  "Europe/Bratislava",
+  "Europe/Brussels",
+  "Europe/Bucharest",
+  "Europe/Budapest",
+  "Europe/Busingen",
+  "Europe/Chisinau",
+  "Europe/Copenhagen",
+  "Europe/Dublin",
+  "Europe/Gibraltar",
+  "Europe/Guernsey",
+  "Europe/Helsinki",
+  "Europe/Isle_of_Man",
+  "Europe/Istanbul",
+  "Europe/Jersey",
+  "Europe/Kaliningrad",
+  "Europe/Kiev",
+  "Europe/Kirov",
+  "Europe/Kyiv",
+  "Europe/Lisbon",
+  "Europe/Ljubljana",
+  "Europe/London",
+  "Europe/Luxembourg",
+  "Europe/Madrid",
+  "Europe/Malta",
+  "Europe/Mariehamn",
+  "Europe/Minsk",
+  "Europe/Monaco",
+  "Europe/Moscow",
+  "Europe/Nicosia",
+  "Europe/Oslo",
+  "Europe/Paris",
+  "Europe/Podgorica",
+  "Europe/Prague",
+  "Europe/Riga",
+  "Europe/Rome",
+  "Europe/Samara",
+  "Europe/San_Marino",
+  "Europe/Sarajevo",
+  "Europe/Saratov",
+  "Europe/Simferopol",
+  "Europe/Skopje",
+  "Europe/Sofia",
+  "Europe/Stockholm",
+  "Europe/Tallinn",
+  "Europe/Tirane",
+  "Europe/Tiraspol",
+  "Europe/Ulyanovsk",
+  "Europe/Uzhgorod",
+  "Europe/Vaduz",
+  "Europe/Vatican",
+  "Europe/Vienna",
+  "Europe/Vilnius",
+  "Europe/Volgograd",
+  "Europe/Warsaw",
+  "Europe/Zagreb",
+  "Europe/Zaporozhye",
+  "Europe/Zurich",
+  "GB",
+  "GB-Eire",
+  "GMT",
+  "GMT+0",
+  "GMT-0",
+  "GMT0",
+  "Greenwich",
+  "HST",
+  "Hongkong",
+  "Iceland",
+  "Indian/Antananarivo",
+  "Indian/Chagos",
+  "Indian/Christmas",
+  "Indian/Cocos",
+  "Indian/Comoro",
+  "Indian/Kerguelen",
+  "Indian/Mahe",
+  "Indian/Maldives",
+  "Indian/Mauritius",
+  "Indian/Mayotte",
+  "Indian/Reunion",
+  "Iran",
+  "Israel",
+  "Jamaica",
+  "Japan",
+  "Kwajalein",
+  "Libya",
+  "MET",
+  "MST",
+  "MST7MDT",
+  "Mexico/BajaNorte",
+  "Mexico/BajaSur",
+  "Mexico/General",
+  "NZ",
+  "NZ-CHAT",
+  "Navajo",
+  "PRC",
+  "PST8PDT",
+  "Pacific/Apia",
+  "Pacific/Auckland",
+  "Pacific/Bougainville",
+  "Pacific/Chatham",
+  "Pacific/Chuuk",
+  "Pacific/Easter",
+  "Pacific/Efate",
+  "Pacific/Enderbury",
+  "Pacific/Fakaofo",
+  "Pacific/Fiji",
+  "Pacific/Funafuti",
+  "Pacific/Galapagos",
+  "Pacific/Gambier",
+  "Pacific/Guadalcanal",
+  "Pacific/Guam",
+  "Pacific/Honolulu",
+  "Pacific/Johnston",
+  "Pacific/Kanton",
+  "Pacific/Kiritimati",
+  "Pacific/Kosrae",
+  "Pacific/Kwajalein",
+  "Pacific/Majuro",
+  "Pacific/Marquesas",
+  "Pacific/Midway",
+  "Pacific/Nauru",
+  "Pacific/Niue",
+  "Pacific/Norfolk",
+  "Pacific/Noumea",
+  "Pacific/Pago_Pago",
+  "Pacific/Palau",
+  "Pacific/Pitcairn",
+  "Pacific/Pohnpei",
+  "Pacific/Ponape",
+  "Pacific/Port_Moresby",
+  "Pacific/Rarotonga",
+  "Pacific/Saipan",
+  "Pacific/Samoa",
+  "Pacific/Tahiti",
+  "Pacific/Tarawa",
+  "Pacific/Tongatapu",
+  "Pacific/Truk",
+  "Pacific/Wake",
+  "Pacific/Wallis",
+  "Pacific/Yap",
+  "Poland",
+  "Portugal",
+  "ROC",
+  "ROK",
+  "Singapore",
+  "Turkey",
+  "UCT",
+  "US/Alaska",
+  "US/Aleutian",
+  "US/Arizona",
+  "US/Central",
+  "US/East-Indiana",
+  "US/Eastern",
+  "US/Hawaii",
+  "US/Indiana-Starke",
+  "US/Michigan",
+  "US/Mountain",
+  "US/Pacific",
+  "US/Samoa",
+  "UTC",
+  "Universal",
+  "W-SU",
+  "WET",
+  "Zulu"
+]
+```
+
+# Workers
+
+The worker service should be the only one in the stack that would require to scale. You can use the `--worker` option
+to specifiy the number of workers that should be deployed in the cluster. This will not scale up the cluster to the
+quantity provided, but will ensure that number of workers are deployed in the cluster. Meaning, it will also remove
+workers if the number is lower than what is currently running.
+
+```bash
+dschedule -w 15
+
+dschedule -s -l
++--------------+-------------------+-------------------------------------------------+-----------+
+|      ID      |        Name       |                      Image                      |  Replicas |
++--------------+-------------------+-------------------------------------------------+-----------+
+| w0xud9ffoxzr |       broker      |       registry:5000/dschedule_broker:1.0.0      |    1/1    |
+| y339xtl38vp9 | container_scraper | registry:5000/dschedule_container_scraper:1.0.0 |    3/3    |
+| tg8sdt4guogj |      grafana      |      registry:5000/dschedule_grafana:1.0.0      |    1/1    |
+| 21oyesaxlaoy |      mongodb      |      registry:5000/dschedule_mongodb:1.0.0      |    1/1    |
+| ty6sxstsp70z |  mongodb_scraper  |  registry:5000/dschedule_mongodb_scraper:1.0.0  |    1/1    |
+| jgw11cjgi4a9 |    node_scraper   |    registry:5000/dschedule_node_scraper:1.0.0   |    3/3    |
+| 5zrd63gyfu74 |     prometheus    |     registry:5000/dschedule_prometheus:1.0.0    |    1/1    |
+| 733wfnx4hehw |       proxy       |       registry:5000/dschedule_proxy:1.0.0       |    1/1    |
+| szz0gnl4sqdn |   proxy_scraper   |   registry:5000/dschedule_proxy_scraper:1.0.0   |    1/1    |
+| nysr2eody3wm |      registry     |      registry:5000/dschedule_registry:1.0.0     |    1/1    |
+| twrovw9vnpx4 |     scheduler     |     registry:5000/dschedule_scheduler:1.0.0     |    1/1    |
+| dt4x9j1b5et7 |       worker      |       registry:5000/dschedule_worker:1.0.0      |   15/15   |
+|      -       |         -         |                        -                        | Total: 30 |
++--------------+-------------------+-------------------------------------------------+-----------+
+```
+
+Then of course you can use --swarm --list --verbose to view where the workers are deployed in the cluster:
+```bash
+dschedule -S -l -v
+dock-schedule-1 (192.168.122.110) [Leader]
+    CPU Load Avg (1m):    9.0%
+    CPU Load Avg (5m):    16.5%
+    CPU Load Avg (15m):   13.5%
+    Memory Used:          1.48 GiB (85.4%)
+    Disk Used:            10.31 GiB (54.7%)
+    Containers:
+	dock-schedule_broker.1.184opbko5n3rg2kd2ps6vz46p
+	    CPU (1m):    0.4%
+	    Memory Used: 104.43 MiB (6.9%)
+	dock-schedule_container_scraper.ak2u8rfw0rvkxats1xdo7ei24.ekgbtn7p3trf8q27vm1xl44ze
+	    CPU (1m):    2.3%
+	    Memory Used: 68.75 MiB (4.5%)
+	dock-schedule_grafana.1.ps26xk48ms2vxk6qlftuyuov6
+	    CPU (1m):    0.2%
+	    Memory Used: 112.87 MiB (7.5%)
+	dock-schedule_mongodb.1.q4ntrzn4ee40htxtkeuujayfy
+	    CPU (1m):    0.5%
+	    Memory Used: 174.72 MiB (11.5%)
+	dock-schedule_mongodb_scraper.1.uvccgr19858n3eaj7boskezfk
+	    CPU (1m):    0.4%
+	    Memory Used: 37.73 MiB (2.5%)
+	dock-schedule_node_scraper.ak2u8rfw0rvkxats1xdo7ei24.jlslsyase1dna323nfmlzie4a
+	    CPU (1m):    0.2%
+	    Memory Used: 18.39 MiB (1.2%)
+	dock-schedule_prometheus.1.u0xss8late32cbugi4lupy2a4
+	    CPU (1m):    0.3%
+	    Memory Used: 237.21 MiB (15.7%)
+	dock-schedule_proxy.1.8uncvqdyyg2959wzt4w5p2c7b
+	    CPU (1m):    0.1%
+	    Memory Used: 6.51 MiB (0.4%)
+	dock-schedule_proxy_scraper.1.yml2488nwpjlht6moxtblpj69
+	    CPU (1m):    0.1%
+	    Memory Used: 23.49 MiB (1.6%)
+	dock-schedule_worker.1.j2u6zuqrha8yaqt6jk17onucm
+	    CPU (1m):    0.9%
+	    Memory Used: 54.09 MiB (3.6%)
+	dock-schedule_registry.1.ugmcq07xf11ni1kg97h6jrigk
+	    CPU (1m):    0.1%
+	    Memory Used: 21.64 MiB (1.4%)
+	dock-schedule_scheduler.1.m0d9m6h2heha4xb3a169uzhwl
+	    CPU (1m):    0.1%
+	    Memory Used: 30.80 MiB (2.0%)
+	dock-schedule_worker.9.gzkz5ewhsb6ril9293e3j7010
+	    CPU (1m):    0.1%
+	    Memory Used: 27.89 MiB (1.8%)
+	dock-schedule_worker.11.ia9ec2x8dhy7fs5bypwwkzdu2
+	    CPU (1m):    0.1%
+	    Memory Used: 27.91 MiB (1.8%)
+	dock-schedule_worker.4.udxft3se1vs1u6mwistsg6t3a
+	    CPU (1m):    0.1%
+	    Memory Used: 28.49 MiB (1.9%)
+	dock-schedule_worker.8.v3lp6yjn65c6awzkgqtz8flnh
+	    CPU (1m):    0.1%
+	    Memory Used: 27.98 MiB (1.8%)
+dock-schedule-2 (192.168.122.52) 
+    CPU Load Avg (1m):    5.0%
+    CPU Load Avg (5m):    13.5%
+    CPU Load Avg (15m):   9.0%
+    Memory Used:          0.75 GiB (43.1%)
+    Disk Used:            6.43 GiB (34.1%)
+    Containers:
+	dock-schedule_container_scraper.tzyvedvj816i7a424jtheeq26.nhx4n7ql20yslomem9ljown03
+	    CPU (1m):    1.2%
+	    Memory Used: 105.28 MiB (13.8%)
+	dock-schedule_node_scraper.tzyvedvj816i7a424jtheeq26.n4hooxsvqlb5816habok50p81
+	    CPU (1m):    0.1%
+	    Memory Used: 29.15 MiB (3.8%)
+	dock-schedule_worker.3.5korygikmeakv84k1rncqda63
+	    CPU (1m):    0.8%
+	    Memory Used: 48.82 MiB (6.4%)
+	dock-schedule_worker.13.9h0ho36r3kjoqaogay9uu23pl
+	    CPU (1m):    0.1%
+	    Memory Used: 30.27 MiB (4.0%)
+	dock-schedule_worker.6.j3jcq9jit11gepb2ql7irmlhw
+	    CPU (1m):    0.1%
+	    Memory Used: 31.30 MiB (4.1%)
+	dock-schedule_worker.7.ke8f739rc6rch1jtxikcuqn27
+	    CPU (1m):    0.1%
+	    Memory Used: 31.30 MiB (4.1%)
+	dock-schedule_worker.14.pemnz2krx2npcna6vgoze9y5c
+	    CPU (1m):    0.1%
+	    Memory Used: 31.31 MiB (4.1%)
+dock-schedule-3 (192.168.122.195) 
+    CPU Load Avg (1m):    0.5%
+    CPU Load Avg (5m):    4.0%
+    CPU Load Avg (15m):   3.5%
+    Memory Used:          0.77 GiB (44.3%)
+    Disk Used:            6.43 GiB (34.1%)
+    Containers:
+	dock-schedule_container_scraper.jaj2f3zwj3zcyzz0cpdexy1uh.nvfop9qso9b9bnb1b71h5jami
+	    CPU (1m):    1.2%
+	    Memory Used: 105.38 MiB (13.4%)
+	dock-schedule_node_scraper.jaj2f3zwj3zcyzz0cpdexy1uh.ts6xaw4ihb3l5xmps4xgxu398
+	    CPU (1m):    0.1%
+	    Memory Used: 29.47 MiB (3.7%)
+	dock-schedule_worker.5.rga6hxebon6xxw6e7l9ck2byt
+	    CPU (1m):    0.8%
+	    Memory Used: 37.78 MiB (4.8%)
+	dock-schedule_worker.10.jvq52zx1iq1707me4gs6f4vje
+	    CPU (1m):    0.1%
+	    Memory Used: 31.46 MiB (4.0%)
+	dock-schedule_worker.12.r9n52ojptozrezqrfui30nf7c
+	    CPU (1m):    0.1%
+	    Memory Used: 31.40 MiB (4.0%)
+	dock-schedule_worker.2.um4h3ikqpa0hxwjaexz20udpq
+	    CPU (1m):    0.1%
+	    Memory Used: 31.24 MiB (4.0%)
+	dock-schedule_worker.15.w3v3ud41nswh0ei55js3rmmlv
+	    CPU (1m):    0.1%
+	    Memory Used: 29.47 MiB (3.7%)
+```

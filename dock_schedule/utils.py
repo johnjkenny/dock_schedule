@@ -238,7 +238,7 @@ class Utils():
         return stdout, state, error
 
     def set_workers(self, worker_qty: int = 1):
-        return self._run_cmd(f'docker service scale dock-schedule_worker={worker_qty}')[1]
+        return self._run_cmd(f'docker service scale dock-schedule_worker={worker_qty} -d')[1]
 
     def run_ansible_playbook(self, playbook: str, inventory: Dict):
         with TemporaryDirectory(dir='/tmp', delete=True) as temp_dir:

@@ -10,8 +10,6 @@ from dock_schedule.swarm import Swarm, Services, Containers
 def parse_parent_args(args: dict):
     if args.get('init'):
         return init(args['init'])
-    if args.get('workers'):
-        return workers(args['workers'])
     if args.get('services'):
         return services(args['services'])
     if args.get('swarm'):
@@ -20,6 +18,8 @@ def parse_parent_args(args: dict):
         return containers(args['containers'])
     if args.get('jobs'):
         return jobs(args['jobs'])
+    if args.get('workers'):
+        return Utils().set_workers(args['workers'])
     return True
 
 
@@ -40,11 +40,6 @@ def parent():
             'help': 'Dock Schedule service commands',
             'nargs': REMAINDER
         },
-        'workers': {
-            'short': 'w',
-            'help': 'Dock Schedule worker commands',
-            'nargs': REMAINDER
-        },
         'containers': {
             'short': 'c',
             'help': 'Dock Schedule container commands',
@@ -54,7 +49,13 @@ def parent():
             'short': 'j',
             'help': 'Dock Schedule job commands',
             'nargs': REMAINDER
-        }
+        },
+        'workers': {
+            'short': 'w',
+            'help': 'Set the number of workers. This is the number of total workers deployed. Default: 3',
+            'default': 3,
+            'type': int,
+        },
     }).set_arguments()
     if not parse_parent_args(args):
         exit(1)
@@ -136,26 +137,6 @@ def swarm(parent_args: list = None):
         }
     }).set_arguments()
     if not parse_swarm_args(args):
-        exit(1)
-    exit(0)
-
-
-def parse_workers_args(args: dict):
-    if args.get('qty'):
-        return Utils().set_workers(args['qty'])
-    return True
-
-
-def workers(parent_args: list = None):
-    args = ArgParser('Dock Scheduler: Worker', parent_args, {
-        'qty': {
-            'short': 'q',
-            'help': 'Set the number of workers. This is the number of total workers deployed. Default: 1',
-            'default': 1,
-            'type': int,
-        },
-    }).set_arguments()
-    if not parse_workers_args(args):
         exit(1)
     exit(0)
 
