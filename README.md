@@ -1576,7 +1576,7 @@ Job Schedule:
 ```
 
 You can also use the `--get` option to get a specific job cron by name or ID. You can give multiple crons the same name
-but each must have a unique ID.
+but each will have a unique ID generated when created.
 
 ```bash
 dschedule -j -g -n Ansible-Test01
@@ -1974,65 +1974,80 @@ options:
 1. Run Local Jobs (on worker containers in the swarm):
 ```bash
 # Drop --wait, -w to run job in background
-dschedule -j -r -i 69112dee-97d0-47a9-9a5d-b63e3f15e51c -w
-[2025-04-26 16:16:00,720][INFO][utils,597]: Job Python-Test01 sent to scheduler successfully. Waiting for completion...
-[2025-04-26 16:16:15,726][INFO][utils,564]: Job completed successfully
+dschedule -j -r -i adf98018-5e91-4040-8b89-4e118eb8f2e5 -w
+[2025-04-30 18:44:26,148][INFO][schedule,365]: Successfully sent job bb9bc932-f5d7-408e-8566-0688ecbea556 "Python-Test01" to scheduler
+[2025-04-30 18:44:31,152][INFO][schedule,325]: Job completed successfully
 
 # Change run args:
-dschedule -j -r -i 69112dee-97d0-47a9-9a5d-b63e3f15e51c -w -a 1
-[2025-04-26 16:17:47,608][INFO][utils,597]: Job Python-Test01 sent to scheduler successfully. Waiting for completion...
-[2025-04-26 16:18:02,616][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+dschedule -j -r -i adf98018-5e91-4040-8b89-4e118eb8f2e5 -w -a 1
+[2025-04-30 18:44:04,789][INFO][schedule,365]: Successfully sent job 580b3aba-b799-439a-9ab8-fcacc56f6e48 "Python-Test01" to scheduler
+[2025-04-30 18:44:09,795][ERROR][schedule,331]: Job failed:
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
 # Python test job
 dschedule -j -r -t python3 -r test.py -a 0 -w
-[2025-04-26 17:03:04,663][INFO][utils,601]: Job manual-python3-test.py sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:03:09,669][INFO][utils,564]: Job completed successfully
+[2025-04-30 18:43:16,846][INFO][schedule,365]: Successfully sent job 24055b32-4a54-4d2f-b424-8388d4870e0b "manual-python3-test.py" to scheduler
+[2025-04-30 18:43:21,852][INFO][schedule,325]: Job completed successfully
 
 dschedule -j -r -t python3 -r test.py -a 1 -w
-[2025-04-26 17:03:20,693][INFO][utils,601]: Job manual-python3-test.py sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:03:25,699][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+[2025-04-30 18:42:49,814][INFO][schedule,365]: Successfully sent job 651e8b86-a508-4b6f-b952-6fb9fd6fe107 "manual-python3-test.py" to scheduler
+[2025-04-30 18:42:54,817][ERROR][schedule,331]: Job failed:
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-# Php test job
+# PHP test job
 dschedule -j -r -t php -r test.php -a 0 -w
-[2025-04-26 17:04:10,244][INFO][utils,601]: Job manual-php-test.php sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:04:15,250][INFO][utils,564]: Job completed successfully
+[2025-04-30 18:42:23,189][INFO][schedule,365]: Successfully sent job 094045c2-6a39-4511-a458-b597d350a864 "manual-php-test.php" to scheduler
+[2025-04-30 18:42:28,194][INFO][schedule,325]: Job completed successfully
 
 dschedule -j -r -t php -r test.php -a 1 -w
-[2025-04-26 17:04:18,848][INFO][utils,601]: Job manual-php-test.php sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:04:23,853][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+[2025-04-30 18:42:01,703][INFO][schedule,365]: Successfully sent job 4805f142-5f57-42c0-9610-31a110d25303 "manual-php-test.php" to scheduler
+[2025-04-30 18:42:06,707][ERROR][schedule,331]: Job failed:
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
 # Bash test job
 dschedule -j -r -t bash -r test.sh -a 0 -w
-[2025-04-26 17:04:39,596][INFO][utils,601]: Job manual-bash-test.sh sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:04:44,601][INFO][utils,564]: Job completed successfully
+[2025-04-30 18:40:44,700][INFO][schedule,365]: Successfully sent job 1ec3fed7-80d4-4b80-aaaa-f5858965772e "manual-bash-test.sh" to scheduler
+[2025-04-30 18:40:49,705][INFO][schedule,325]: Job completed successfully
 
 dschedule -j -r -t bash -r test.sh -a 1 -w
-[2025-04-26 17:04:46,892][INFO][utils,601]: Job manual-bash-test.sh sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:04:51,898][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+[2025-04-30 18:40:25,769][INFO][schedule,365]: Successfully sent job 9978bfb0-4e71-41a8-9372-97aebedc2c8c "manual-bash-test.sh" to scheduler
+[2025-04-30 18:40:30,771][ERROR][schedule,331]: Job failed:
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
 # Node/JS test bob
 dschedule -j -r -t node -r test.js -a 0 -w
-[2025-04-26 17:06:44,474][INFO][utils,601]: Job manual-node-test.js sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:06:49,477][INFO][utils,564]: Job completed successfully
+[2025-04-30 18:40:08,365][INFO][schedule,365]: Successfully sent job a775bae5-fdac-4f52-ae88-5688a02a4ad0 "manual-node-test.js" to scheduler
+[2025-04-30 18:40:13,367][INFO][schedule,325]: Job completed successfully
 
 dschedule -j -r -t node -r test.js -a 1 -w
-[2025-04-26 17:06:52,151][INFO][utils,601]: Job manual-node-test.js sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:06:57,154][ERROR][utils,567]: Job failed: Task 'Run Job' failed on host 'localhost': non-zero return code
+[2025-04-30 18:39:46,369][INFO][schedule,365]: Successfully sent job 6137e1cf-5be8-40c6-84ba-0b45047fd8c7 "manual-node-test.js" to scheduler
+[2025-04-30 18:39:51,375][ERROR][schedule,331]: Job failed:
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
 # Ansible test job
 dschedule -j -r -t ansible -r test.yml -e exit_code=0 -w
-[2025-04-26 17:38:27,305][INFO][utils,601]: Job manual-ansible-test.yml sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:38:32,307][INFO][utils,564]: Job completed successfully
+[2025-04-30 18:39:19,713][INFO][schedule,365]: Successfully sent job 63052a2d-c5b7-4880-b956-c95730356d75 "manual-ansible-test.yml" to scheduler
+[2025-04-30 18:39:24,718][INFO][schedule,325]: Job completed successfully
 
 dschedule -j -r -t ansible -r test.yml -e exit_code=1 -w
-[2025-04-26 17:27:24,828][INFO][utils,601]: Job manual-ansible-test.yml sent to scheduler successfully. Waiting for completion...
-[2025-04-26 17:27:29,830][ERROR][utils,567]: Job failed: Task 'Fail if exit_code is not 0' failed on host 'localhost': Invalid exit code: 1
+[2025-04-30 18:38:44,828][INFO][schedule,365]: Successfully sent job d55fb941-7ea4-47c9-9735-7b953fe17612 "manual-ansible-test.yml" to scheduler
+[2025-04-30 18:38:49,833][ERROR][schedule,331]: Job failed:
+  Task: Fail if exit_code is not 0, Host: localhost, Error: Invalid exit code: 1
 ```
 
 
 2. Run Remote Jobs (on remote ansible hosts):
-```bash
 
+There is an ansible playbook called `remote_cmd.yml` that allows you to run remote commands on the ansible hosts. You
+must provide the `--extraVars` `command` key with the command you want to run as the value. This playbook is simply to
+test the remote functionality, but you could also use it for a make-shift infrastructure system checker with a handful
+of commands you want to run on remote hosts at certain intervals via the scheduler. Create your own playbooks for
+a higher level of infrastructure command and control.
+
+```bash
+dschedule -j -r -n remote-test -t ansible -r remote_cmd.yml -H dock-schedule-2=192.168.122.52 -e command='pwd' -w
+[2025-04-30 18:35:41,636][INFO][schedule,365]: Successfully sent job 6b3e77c2-99a0-401e-b090-a83e1ae82035 "remote-test" to scheduler
+[2025-04-30 18:35:51,644][INFO][schedule,325]: Job completed successfully
 ```
 
 6. Results
@@ -2045,6 +2060,9 @@ you all jobs that have exited with a 0 exit code. Failed will give you all jobs 
 code. Scheduled will give you all jobs sitting in the queue waiting for a worker to acknowledge the job. Use `--verbose`
 to get more detailed output of the job results. The job results are stored in the database and will be autodeleted after
 7 days.
+
+Each ansible task will be logged in the database with its stdin/stdout/stderr output. You can use the `--verbose` option
+to get more details on the ansible tasks in your playbooks.
 
 
 ```bash
@@ -2074,40 +2092,42 @@ options:
 ```bash
 # get the results of the last 15 jobs that have run:
 dschedule -j -R -n all -l 15
-ID: 208947c9-b239-40e6-b430-76aae2efc0d6, Name: Bash-Test01, State: completed, Result: True, Duration: 725 ms
+ID: f9996f2b-c01f-4215-85f8-ba3ad476fec7, Name: Bash-Test01, State: completed, Result: True, Duration: 721 ms
 
-ID: 61d032f2-011e-44fb-8be3-2167ce61e26f, Name: Python-Test01, State: completed, Result: True, Duration: 756 ms
+ID: 22c3e4d1-9a84-4eac-9446-c9209f7ab74e, Name: Python-Test01, State: completed, Result: True, Duration: 642 ms
 
-ID: 666e06c9-483d-4631-9c93-10c0cb2dc7f7, Name: Bash-Test01, State: completed, Result: True, Duration: 749 ms
+ID: bb9bc932-f5d7-408e-8566-0688ecbea556, Name: Python-Test01, State: completed, Result: True, Duration: 724 ms
 
-ID: 95681059-1c8b-435d-bbd0-7cee793d1d33, Name: Bash-Test01, State: completed, Result: True, Duration: 721 ms
+ID: 580b3aba-b799-439a-9ab8-fcacc56f6e48, Name: Python-Test01, State: completed, Result: False, Duration: 631 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-ID: b5050bd7-1165-4078-9e7f-fc9b5925522d, Name: Python-Test01, State: completed, Result: True, Duration: 734 ms
+ID: 24055b32-4a54-4d2f-b424-8388d4870e0b, Name: manual-python3-test.py, State: completed, Result: True, Duration: 651 ms
 
-ID: ed70c33d-d465-47f9-b97a-233588029b7b, Name: Bash-Test01, State: completed, Result: True, Duration: 626 ms
+ID: 651e8b86-a508-4b6f-b952-6fb9fd6fe107, Name: manual-python3-test.py, State: completed, Result: False, Duration: 628 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-ID: d5778bb4-fb8a-496b-9e9d-9a3faf2a6366, Name: Python-Test01, State: completed, Result: True, Duration: 681 ms
+ID: 094045c2-6a39-4511-a458-b597d350a864, Name: manual-php-test.php, State: completed, Result: True, Duration: 646 ms
 
-ID: 4c8ae96f-9226-4338-97cf-6fbaeed35abc, Name: Python-Test01, State: completed, Result: True, Duration: 695 ms
+ID: 98c19947-d37f-48ce-b866-1812093c7b99, Name: Bash-Test01, State: completed, Result: True, Duration: 684 ms
 
-ID: c3b1a345-17d3-4725-8726-7778282135c4, Name: Ansible-Test01, State: completed, Result: False, Duration: 542 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: c8e0dbcb-fd97-4577-8554-d5787dc587e2, Name: Python-Test01, State: completed, Result: True, Duration: 676 ms
 
-ID: a13df419-d368-4b74-a491-ba4c29c6c090, Name: Ansible-Test01, State: completed, Result: False, Duration: 473 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: bde8bd92-bbcf-4229-b817-c653eec617cb, Name: Ansible-Test01, State: completed, Result: False, Duration: 480 ms
+  Task: Fail if exit_code is not 0, Host: node1, Error: Invalid exit code: 1
+  Task: Fail if exit_code is not 0, Host: node2, Error: Invalid exit code: 1
 
-ID: 68c844b7-fe5e-4e7b-9c70-ef3d4c80acdc, Name: Bash-Test01, State: completed, Result: True, Duration: 677 ms
+ID: 4805f142-5f57-42c0-9610-31a110d25303, Name: manual-php-test.php, State: completed, Result: False, Duration: 635 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-ID: 42f4385b-65a3-4b40-811d-a461713b54ba, Name: Ansible-Test01, State: completed, Result: False, Duration: 520 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: 208fd2aa-f323-46e8-891c-c8019196356d, Name: manual-php-test.php, State: completed, Result: False, Duration: 671 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-ID: 49840eb6-b275-49c5-a001-3df1fd1941c4, Name: Python-Test01, State: completed, Result: True, Duration: 753 ms
+ID: 1ec3fed7-80d4-4b80-aaaa-f5858965772e, Name: manual-bash-test.sh, State: completed, Result: True, Duration: 652 ms
 
-ID: 62947b78-ab89-47ae-90d3-0c4469759606, Name: Ansible-Test01, State: completed, Result: False, Duration: 509 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: 9978bfb0-4e71-41a8-9372-97aebedc2c8c, Name: manual-bash-test.sh, State: completed, Result: False, Duration: 634 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-ID: 8566559a-34aa-4572-b4df-bab966501179, Name: Ansible-Test01, State: completed, Result: False, Duration: 506 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: a775bae5-fdac-4f52-ae88-5688a02a4ad0, Name: manual-node-test.js, State: completed, Result: True, Duration: 760 ms
 
 
 # Verbose output example of last 5 jobs run:
@@ -2115,7 +2135,7 @@ dschedule -j -R -n all -v -l 5
 Job Results:
 [
   {
-    "_id": "d64f1b4a-84f0-4889-a7c7-06ad8afc9843",
+    "_id": "f9996f2b-c01f-4215-85f8-ba3ad476fec7",
     "name": "Bash-Test01",
     "type": "bash",
     "run": "test.sh",
@@ -2131,15 +2151,33 @@ Job Results:
       ]
     },
     "state": "completed",
-    "scheduled": "2025-04-29T20:11:42.205442",
-    "start": "2025-04-29T20:11:43.444000",
-    "end": "2025-04-29T20:11:44.133000",
+    "scheduled": "2025-04-30T18:47:20.225091",
+    "start": "2025-04-30T18:47:20.880000",
+    "end": "2025-04-30T18:47:21.601000",
     "result": true,
-    "error": null,
-    "expiryTime": "2025-05-06T20:11:42.205000"
+    "errors": [],
+    "expiryTime": "2025-05-07T18:47:20.226000",
+    "tasks": [
+      {
+        "task": "Run Job",
+        "host": "localhost",
+        "rc": 0,
+        "stdin": [
+          "bash",
+          "/app/jobs/bash/test.sh",
+          "0"
+        ],
+        "stdout": [
+          "Hello, World!",
+          "Exiting with code: 0"
+        ],
+        "stderr": [],
+        "msg": ""
+      }
+    ]
   },
   {
-    "_id": "4dedc3ac-dfc9-45db-a14c-c6ed6792c66a",
+    "_id": "22c3e4d1-9a84-4eac-9446-c9209f7ab74e",
     "name": "Python-Test01",
     "type": "python3",
     "run": "test.py",
@@ -2155,61 +2193,120 @@ Job Results:
       ]
     },
     "state": "completed",
-    "scheduled": "2025-04-29T20:11:42.201615",
-    "start": "2025-04-29T20:11:42.675000",
-    "end": "2025-04-29T20:11:43.439000",
+    "scheduled": "2025-04-30T18:47:20.221313",
+    "start": "2025-04-30T18:47:20.226000",
+    "end": "2025-04-30T18:47:20.868000",
     "result": true,
-    "error": null,
-    "expiryTime": "2025-05-06T20:11:42.204000"
+    "errors": [],
+    "expiryTime": "2025-05-07T18:47:20.222000",
+    "tasks": [
+      {
+        "task": "Run Job",
+        "host": "localhost",
+        "rc": 0,
+        "stdin": [
+          "python3",
+          "/app/jobs/python3/test.py",
+          "0"
+        ],
+        "stdout": [
+          "Hello, World!",
+          "Exiting with code: 0"
+        ],
+        "stderr": [],
+        "msg": ""
+      }
+    ]
   },
   {
-    "_id": "2c964aa9-0360-4061-9ce4-b67277e07104",
-    "name": "Ansible-Test01",
-    "type": "ansible",
-    "run": "test.yml",
-    "args": null,
-    "hostInventory": {
-      "node1": "192.168.6.2",
-      "node2": "192.168.6.3"
-    },
+    "_id": "bb9bc932-f5d7-408e-8566-0688ecbea556",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "0"
+    ],
+    "hostInventory": null,
     "extraVars": {
-      "exit_code": "1"
+      "script_file": "test.py",
+      "script_type": "python3",
+      "script_args": [
+        "0"
+      ]
     },
     "state": "completed",
-    "scheduled": "2025-04-29T20:11:42.198720",
-    "start": "2025-04-29T20:11:42.204000",
-    "end": "2025-04-29T20:11:42.667000",
+    "scheduled": "2025-04-30T18:44:30.124518",
+    "start": "2025-04-30T18:44:30.127000",
+    "end": "2025-04-30T18:44:30.851000",
+    "result": true,
+    "errors": [],
+    "expiryTime": "2025-05-07T18:44:30.124000",
+    "tasks": [
+      {
+        "task": "Run Job",
+        "host": "localhost",
+        "rc": 0,
+        "stdin": [
+          "python3",
+          "/app/jobs/python3/test.py",
+          "0"
+        ],
+        "stdout": [
+          "Hello, World!",
+          "Exiting with code: 0"
+        ],
+        "stderr": [],
+        "msg": ""
+      }
+    ]
+  },
+  {
+    "_id": "580b3aba-b799-439a-9ab8-fcacc56f6e48",
+    "name": "Python-Test01",
+    "type": "python3",
+    "run": "test.py",
+    "args": [
+      "1"
+    ],
+    "hostInventory": null,
+    "extraVars": {
+      "script_file": "test.py",
+      "script_type": "python3",
+      "script_args": [
+        "1"
+      ]
+    },
+    "state": "completed",
+    "scheduled": "2025-04-30T18:44:05.108935",
+    "start": "2025-04-30T18:44:05.110000",
+    "end": "2025-04-30T18:44:05.741000",
     "result": false,
-    "error": "Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1",
-    "expiryTime": "2025-05-06T20:11:42.199000"
-  },
-  {
-    "_id": "3435270c-64a2-47b3-9bd3-ff0846e7acad",
-    "name": "Bash-Test01",
-    "type": "bash",
-    "run": "test.sh",
-    "args": [
-      "0"
+    "errors": [
+      "Task: Run Job, Host: localhost, Error: non-zero return code"
     ],
-    "hostInventory": null,
-    "extraVars": {
-      "script_file": "test.sh",
-      "script_type": "bash",
-      "script_args": [
-        "0"
-      ]
-    },
-    "state": "completed",
-    "scheduled": "2025-04-29T20:06:42.009045",
-    "start": "2025-04-29T20:06:42.701000",
-    "end": "2025-04-29T20:06:43.383000",
-    "result": true,
-    "error": null,
-    "expiryTime": "2025-05-06T20:06:42.010000"
+    "expiryTime": "2025-05-07T18:44:05.109000",
+    "tasks": [
+      {
+        "task": "Run Job",
+        "host": "localhost",
+        "rc": 1,
+        "stdin": [
+          "python3",
+          "/app/jobs/python3/test.py",
+          "1"
+        ],
+        "stdout": [
+          "Hello, World!",
+          "Exiting with code: 1"
+        ],
+        "stderr": [],
+        "msg": "non-zero return code"
+      }
+    ]
   },
   {
-    "_id": "d0d0a66b-300a-47fa-978f-fa115d02c2b1",
-    "name": "Python-Test01",
+    "_id": "24055b32-4a54-4d2f-b424-8388d4870e0b",
+    "name": "manual-python3-test.py",
     "type": "python3",
     "run": "test.py",
     "args": [
@@ -2224,71 +2321,105 @@ Job Results:
       ]
     },
     "state": "completed",
-    "scheduled": "2025-04-29T20:06:42.005947",
-    "start": "2025-04-29T20:06:42.012000",
-    "end": "2025-04-29T20:06:42.695000",
+    "scheduled": "2025-04-30T18:43:20.073148",
+    "start": "2025-04-30T18:43:20.078000",
+    "end": "2025-04-30T18:43:20.729000",
     "result": true,
-    "error": null,
-    "expiryTime": "2025-05-06T20:06:42.006000"
+    "errors": [],
+    "expiryTime": "2025-05-07T18:43:20.073000",
+    "tasks": [
+      {
+        "task": "Run Job",
+        "host": "localhost",
+        "rc": 0,
+        "stdin": [
+          "python3",
+          "/app/jobs/python3/test.py",
+          "0"
+        ],
+        "stdout": [
+          "Hello, World!",
+          "Exiting with code: 0"
+        ],
+        "stderr": [],
+        "msg": ""
+      }
+    ]
   }
 ]
+
 
 # get last three results of a named job:
 dschedule -j -R -n Python-Test01 -l 3
-ID: 15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0, Name: Python-Test01, State: completed, Result: True, Duration: 677 ms
+ID: 22c3e4d1-9a84-4eac-9446-c9209f7ab74e, Name: Python-Test01, State: completed, Result: True, Duration: 642 ms
 
-ID: 4dedc3ac-dfc9-45db-a14c-c6ed6792c66a, Name: Python-Test01, State: completed, Result: True, Duration: 764 ms
+ID: bb9bc932-f5d7-408e-8566-0688ecbea556, Name: Python-Test01, State: completed, Result: True, Duration: 724 ms
 
-ID: d0d0a66b-300a-47fa-978f-fa115d02c2b1, Name: Python-Test01, State: completed, Result: True, Duration: 683 ms
+ID: 580b3aba-b799-439a-9ab8-fcacc56f6e48, Name: Python-Test01, State: completed, Result: False, Duration: 631 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
+
 
 # get details results a specific job:
-dschedule -j -R -i 15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0 -v
+dschedule -j -R -i 6b3e77c2-99a0-401e-b090-a83e1ae82035 -v
 Job Results:
 [
   {
-    "_id": "15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0",
-    "name": "Python-Test01",
-    "type": "python3",
-    "run": "test.py",
-    "args": [
-      "0"
-    ],
-    "hostInventory": null,
+    "_id": "6b3e77c2-99a0-401e-b090-a83e1ae82035",
+    "name": "remote-test",
+    "type": "ansible",
+    "run": "remote_cmd.yml",
+    "args": null,
+    "hostInventory": {
+      "dock-schedule-2": "192.168.122.52"
+    },
     "extraVars": {
-      "script_file": "test.py",
-      "script_type": "python3",
-      "script_args": [
-        "0"
-      ]
+      "command": "pwd"
     },
     "state": "completed",
-    "scheduled": "2025-04-29T20:16:42.386141",
-    "start": "2025-04-29T20:16:42.394000",
-    "end": "2025-04-29T20:16:43.071000",
+    "scheduled": "2025-04-30T18:35:44.765231",
+    "start": "2025-04-30T18:35:44.768000",
+    "end": "2025-04-30T18:35:46.658000",
     "result": true,
-    "error": null,
-    "expiryTime": "2025-05-06T20:16:42.386000"
+    "errors": [],
+    "expiryTime": "2025-05-07T18:35:44.765000",
+    "tasks": [
+      {
+        "task": "Run command",
+        "host": "dock-schedule-2",
+        "rc": 0,
+        "stdin": [
+          "pwd"
+        ],
+        "stdout": [
+          "/home/ansible"
+        ],
+        "stderr": [],
+        "msg": ""
+      }
+    ]
   }
 ]
 
+
 # Get the last 3 failed jobs:
 dschedule -j -R -n all -f failed -l 3
-ID: 2c964aa9-0360-4061-9ce4-b67277e07104, Name: Ansible-Test01, State: completed, Result: False, Duration: 463 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: b3d9ed5e-c2ee-409d-bde7-03673bc35be4, Name: Ansible-Test01, State: completed, Result: False, Duration: 446 ms
+  Task: Fail if exit_code is not 0, Host: node1, Error: Invalid exit code: 1
+  Task: Fail if exit_code is not 0, Host: node2, Error: Invalid exit code: 1
 
-ID: c3b1a345-17d3-4725-8726-7778282135c4, Name: Ansible-Test01, State: completed, Result: False, Duration: 542 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: 580b3aba-b799-439a-9ab8-fcacc56f6e48, Name: Python-Test01, State: completed, Result: False, Duration: 631 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
-ID: a13df419-d368-4b74-a491-ba4c29c6c090, Name: Ansible-Test01, State: completed, Result: False, Duration: 473 ms
-  Error: Task 'Fail if exit_code is not 0' failed on host 'node1': Invalid exit code: 1
+ID: 651e8b86-a508-4b6f-b952-6fb9fd6fe107, Name: manual-python3-test.py, State: completed, Result: False, Duration: 628 ms
+  Task: Run Job, Host: localhost, Error: non-zero return code
 
 # Get the last 3 success jobs:
 dschedule -j -R -n all -f success -l 3
-ID: 84f19ebe-c85b-45d7-b1e7-8bda8b087410, Name: Bash-Test01, State: completed, Result: True, Duration: 646 ms
+ID: a8558cf7-daf2-40df-b5ef-16adc16ac333, Name: Bash-Test01, State: completed, Result: True, Duration: 640 ms
 
-ID: 15d6ae12-d9e8-4fa4-969c-1b9bd5f770e0, Name: Python-Test01, State: completed, Result: True, Duration: 677 ms
+ID: 4cab0428-e154-4660-ab1d-968b676b43f1, Name: Python-Test01, State: completed, Result: True, Duration: 640 ms
 
-ID: d64f1b4a-84f0-4889-a7c7-06ad8afc9843, Name: Bash-Test01, State: completed, Result: True, Duration: 689 ms
+ID: f9996f2b-c01f-4215-85f8-ba3ad476fec7, Name: Bash-Test01, State: completed, Result: True, Duration: 721 ms
 
 # Get the scheduled jobs (10 results by default, but more might be pending, use -l to get full list):
 dschedule -j -R -n all -f scheduled
@@ -2325,597 +2456,7 @@ Timezone Options:
   "Africa/Abidjan",
   "Africa/Accra",
   "Africa/Addis_Ababa",
-  "Africa/Algiers",
-  "Africa/Asmara",
-  "Africa/Asmera",
-  "Africa/Bamako",
-  "Africa/Bangui",
-  "Africa/Banjul",
-  "Africa/Bissau",
-  "Africa/Blantyre",
-  "Africa/Brazzaville",
-  "Africa/Bujumbura",
-  "Africa/Cairo",
-  "Africa/Casablanca",
-  "Africa/Ceuta",
-  "Africa/Conakry",
-  "Africa/Dakar",
-  "Africa/Dar_es_Salaam",
-  "Africa/Djibouti",
-  "Africa/Douala",
-  "Africa/El_Aaiun",
-  "Africa/Freetown",
-  "Africa/Gaborone",
-  "Africa/Harare",
-  "Africa/Johannesburg",
-  "Africa/Juba",
-  "Africa/Kampala",
-  "Africa/Khartoum",
-  "Africa/Kigali",
-  "Africa/Kinshasa",
-  "Africa/Lagos",
-  "Africa/Libreville",
-  "Africa/Lome",
-  "Africa/Luanda",
-  "Africa/Lubumbashi",
-  "Africa/Lusaka",
-  "Africa/Malabo",
-  "Africa/Maputo",
-  "Africa/Maseru",
-  "Africa/Mbabane",
-  "Africa/Mogadishu",
-  "Africa/Monrovia",
-  "Africa/Nairobi",
-  "Africa/Ndjamena",
-  "Africa/Niamey",
-  "Africa/Nouakchott",
-  "Africa/Ouagadougou",
-  "Africa/Porto-Novo",
-  "Africa/Sao_Tome",
-  "Africa/Timbuktu",
-  "Africa/Tripoli",
-  "Africa/Tunis",
-  "Africa/Windhoek",
-  "America/Adak",
-  "America/Anchorage",
-  "America/Anguilla",
-  "America/Antigua",
-  "America/Araguaina",
-  "America/Argentina/Buenos_Aires",
-  "America/Argentina/Catamarca",
-  "America/Argentina/ComodRivadavia",
-  "America/Argentina/Cordoba",
-  "America/Argentina/Jujuy",
-  "America/Argentina/La_Rioja",
-  "America/Argentina/Mendoza",
-  "America/Argentina/Rio_Gallegos",
-  "America/Argentina/Salta",
-  "America/Argentina/San_Juan",
-  "America/Argentina/San_Luis",
-  "America/Argentina/Tucuman",
-  "America/Argentina/Ushuaia",
-  "America/Aruba",
-  "America/Asuncion",
-  "America/Atikokan",
-  "America/Atka",
-  "America/Bahia",
-  "America/Bahia_Banderas",
-  "America/Barbados",
-  "America/Belem",
-  "America/Belize",
-  "America/Blanc-Sablon",
-  "America/Boa_Vista",
-  "America/Bogota",
-  "America/Boise",
-  "America/Buenos_Aires",
-  "America/Cambridge_Bay",
-  "America/Campo_Grande",
-  "America/Cancun",
-  "America/Caracas",
-  "America/Catamarca",
-  "America/Cayenne",
-  "America/Cayman",
-  "America/Chicago",
-  "America/Chihuahua",
-  "America/Ciudad_Juarez",
-  "America/Coral_Harbour",
-  "America/Cordoba",
-  "America/Costa_Rica",
-  "America/Coyhaique",
-  "America/Creston",
-  "America/Cuiaba",
-  "America/Curacao",
-  "America/Danmarkshavn",
-  "America/Dawson",
-  "America/Dawson_Creek",
-  "America/Denver",
-  "America/Detroit",
-  "America/Dominica",
-  "America/Edmonton",
-  "America/Eirunepe",
-  "America/El_Salvador",
-  "America/Ensenada",
-  "America/Fort_Nelson",
-  "America/Fort_Wayne",
-  "America/Fortaleza",
-  "America/Glace_Bay",
-  "America/Godthab",
-  "America/Goose_Bay",
-  "America/Grand_Turk",
-  "America/Grenada",
-  "America/Guadeloupe",
-  "America/Guatemala",
-  "America/Guayaquil",
-  "America/Guyana",
-  "America/Halifax",
-  "America/Havana",
-  "America/Hermosillo",
-  "America/Indiana/Indianapolis",
-  "America/Indiana/Knox",
-  "America/Indiana/Marengo",
-  "America/Indiana/Petersburg",
-  "America/Indiana/Tell_City",
-  "America/Indiana/Vevay",
-  "America/Indiana/Vincennes",
-  "America/Indiana/Winamac",
-  "America/Indianapolis",
-  "America/Inuvik",
-  "America/Iqaluit",
-  "America/Jamaica",
-  "America/Jujuy",
-  "America/Juneau",
-  "America/Kentucky/Louisville",
-  "America/Kentucky/Monticello",
-  "America/Knox_IN",
-  "America/Kralendijk",
-  "America/La_Paz",
-  "America/Lima",
-  "America/Los_Angeles",
-  "America/Louisville",
-  "America/Lower_Princes",
-  "America/Maceio",
-  "America/Managua",
-  "America/Manaus",
-  "America/Marigot",
-  "America/Martinique",
-  "America/Matamoros",
-  "America/Mazatlan",
-  "America/Mendoza",
-  "America/Menominee",
-  "America/Merida",
-  "America/Metlakatla",
-  "America/Mexico_City",
-  "America/Miquelon",
-  "America/Moncton",
-  "America/Monterrey",
-  "America/Montevideo",
-  "America/Montreal",
-  "America/Montserrat",
-  "America/Nassau",
-  "America/New_York",
-  "America/Nipigon",
-  "America/Nome",
-  "America/Noronha",
-  "America/North_Dakota/Beulah",
-  "America/North_Dakota/Center",
-  "America/North_Dakota/New_Salem",
-  "America/Nuuk",
-  "America/Ojinaga",
-  "America/Panama",
-  "America/Pangnirtung",
-  "America/Paramaribo",
-  "America/Phoenix",
-  "America/Port-au-Prince",
-  "America/Port_of_Spain",
-  "America/Porto_Acre",
-  "America/Porto_Velho",
-  "America/Puerto_Rico",
-  "America/Punta_Arenas",
-  "America/Rainy_River",
-  "America/Rankin_Inlet",
-  "America/Recife",
-  "America/Regina",
-  "America/Resolute",
-  "America/Rio_Branco",
-  "America/Rosario",
-  "America/Santa_Isabel",
-  "America/Santarem",
-  "America/Santiago",
-  "America/Santo_Domingo",
-  "America/Sao_Paulo",
-  "America/Scoresbysund",
-  "America/Shiprock",
-  "America/Sitka",
-  "America/St_Barthelemy",
-  "America/St_Johns",
-  "America/St_Kitts",
-  "America/St_Lucia",
-  "America/St_Thomas",
-  "America/St_Vincent",
-  "America/Swift_Current",
-  "America/Tegucigalpa",
-  "America/Thule",
-  "America/Thunder_Bay",
-  "America/Tijuana",
-  "America/Toronto",
-  "America/Tortola",
-  "America/Vancouver",
-  "America/Virgin",
-  "America/Whitehorse",
-  "America/Winnipeg",
-  "America/Yakutat",
-  "America/Yellowknife",
-  "Antarctica/Casey",
-  "Antarctica/Davis",
-  "Antarctica/DumontDUrville",
-  "Antarctica/Macquarie",
-  "Antarctica/Mawson",
-  "Antarctica/McMurdo",
-  "Antarctica/Palmer",
-  "Antarctica/Rothera",
-  "Antarctica/South_Pole",
-  "Antarctica/Syowa",
-  "Antarctica/Troll",
-  "Antarctica/Vostok",
-  "Arctic/Longyearbyen",
-  "Asia/Aden",
-  "Asia/Almaty",
-  "Asia/Amman",
-  "Asia/Anadyr",
-  "Asia/Aqtau",
-  "Asia/Aqtobe",
-  "Asia/Ashgabat",
-  "Asia/Ashkhabad",
-  "Asia/Atyrau",
-  "Asia/Baghdad",
-  "Asia/Bahrain",
-  "Asia/Baku",
-  "Asia/Bangkok",
-  "Asia/Barnaul",
-  "Asia/Beirut",
-  "Asia/Bishkek",
-  "Asia/Brunei",
-  "Asia/Calcutta",
-  "Asia/Chita",
-  "Asia/Choibalsan",
-  "Asia/Chongqing",
-  "Asia/Chungking",
-  "Asia/Colombo",
-  "Asia/Dacca",
-  "Asia/Damascus",
-  "Asia/Dhaka",
-  "Asia/Dili",
-  "Asia/Dubai",
-  "Asia/Dushanbe",
-  "Asia/Famagusta",
-  "Asia/Gaza",
-  "Asia/Harbin",
-  "Asia/Hebron",
-  "Asia/Ho_Chi_Minh",
-  "Asia/Hong_Kong",
-  "Asia/Hovd",
-  "Asia/Irkutsk",
-  "Asia/Istanbul",
-  "Asia/Jakarta",
-  "Asia/Jayapura",
-  "Asia/Jerusalem",
-  "Asia/Kabul",
-  "Asia/Kamchatka",
-  "Asia/Karachi",
-  "Asia/Kashgar",
-  "Asia/Kathmandu",
-  "Asia/Katmandu",
-  "Asia/Khandyga",
-  "Asia/Kolkata",
-  "Asia/Krasnoyarsk",
-  "Asia/Kuala_Lumpur",
-  "Asia/Kuching",
-  "Asia/Kuwait",
-  "Asia/Macao",
-  "Asia/Macau",
-  "Asia/Magadan",
-  "Asia/Makassar",
-  "Asia/Manila",
-  "Asia/Muscat",
-  "Asia/Nicosia",
-  "Asia/Novokuznetsk",
-  "Asia/Novosibirsk",
-  "Asia/Omsk",
-  "Asia/Oral",
-  "Asia/Phnom_Penh",
-  "Asia/Pontianak",
-  "Asia/Pyongyang",
-  "Asia/Qatar",
-  "Asia/Qostanay",
-  "Asia/Qyzylorda",
-  "Asia/Rangoon",
-  "Asia/Riyadh",
-  "Asia/Saigon",
-  "Asia/Sakhalin",
-  "Asia/Samarkand",
-  "Asia/Seoul",
-  "Asia/Shanghai",
-  "Asia/Singapore",
-  "Asia/Srednekolymsk",
-  "Asia/Taipei",
-  "Asia/Tashkent",
-  "Asia/Tbilisi",
-  "Asia/Tehran",
-  "Asia/Tel_Aviv",
-  "Asia/Thimbu",
-  "Asia/Thimphu",
-  "Asia/Tokyo",
-  "Asia/Tomsk",
-  "Asia/Ujung_Pandang",
-  "Asia/Ulaanbaatar",
-  "Asia/Ulan_Bator",
-  "Asia/Urumqi",
-  "Asia/Ust-Nera",
-  "Asia/Vientiane",
-  "Asia/Vladivostok",
-  "Asia/Yakutsk",
-  "Asia/Yangon",
-  "Asia/Yekaterinburg",
-  "Asia/Yerevan",
-  "Atlantic/Azores",
-  "Atlantic/Bermuda",
-  "Atlantic/Canary",
-  "Atlantic/Cape_Verde",
-  "Atlantic/Faeroe",
-  "Atlantic/Faroe",
-  "Atlantic/Jan_Mayen",
-  "Atlantic/Madeira",
-  "Atlantic/Reykjavik",
-  "Atlantic/South_Georgia",
-  "Atlantic/St_Helena",
-  "Atlantic/Stanley",
-  "Australia/ACT",
-  "Australia/Adelaide",
-  "Australia/Brisbane",
-  "Australia/Broken_Hill",
-  "Australia/Canberra",
-  "Australia/Currie",
-  "Australia/Darwin",
-  "Australia/Eucla",
-  "Australia/Hobart",
-  "Australia/LHI",
-  "Australia/Lindeman",
-  "Australia/Lord_Howe",
-  "Australia/Melbourne",
-  "Australia/NSW",
-  "Australia/North",
-  "Australia/Perth",
-  "Australia/Queensland",
-  "Australia/South",
-  "Australia/Sydney",
-  "Australia/Tasmania",
-  "Australia/Victoria",
-  "Australia/West",
-  "Australia/Yancowinna",
-  "Brazil/Acre",
-  "Brazil/DeNoronha",
-  "Brazil/East",
-  "Brazil/West",
-  "CET",
-  "CST6CDT",
-  "Canada/Atlantic",
-  "Canada/Central",
-  "Canada/Eastern",
-  "Canada/Mountain",
-  "Canada/Newfoundland",
-  "Canada/Pacific",
-  "Canada/Saskatchewan",
-  "Canada/Yukon",
-  "Chile/Continental",
-  "Chile/EasterIsland",
-  "Cuba",
-  "EET",
-  "EST",
-  "EST5EDT",
-  "Egypt",
-  "Eire",
-  "Etc/GMT",
-  "Etc/GMT+0",
-  "Etc/GMT+1",
-  "Etc/GMT+10",
-  "Etc/GMT+11",
-  "Etc/GMT+12",
-  "Etc/GMT+2",
-  "Etc/GMT+3",
-  "Etc/GMT+4",
-  "Etc/GMT+5",
-  "Etc/GMT+6",
-  "Etc/GMT+7",
-  "Etc/GMT+8",
-  "Etc/GMT+9",
-  "Etc/GMT-0",
-  "Etc/GMT-1",
-  "Etc/GMT-10",
-  "Etc/GMT-11",
-  "Etc/GMT-12",
-  "Etc/GMT-13",
-  "Etc/GMT-14",
-  "Etc/GMT-2",
-  "Etc/GMT-3",
-  "Etc/GMT-4",
-  "Etc/GMT-5",
-  "Etc/GMT-6",
-  "Etc/GMT-7",
-  "Etc/GMT-8",
-  "Etc/GMT-9",
-  "Etc/GMT0",
-  "Etc/Greenwich",
-  "Etc/UCT",
-  "Etc/UTC",
-  "Etc/Universal",
-  "Etc/Zulu",
-  "Europe/Amsterdam",
-  "Europe/Andorra",
-  "Europe/Astrakhan",
-  "Europe/Athens",
-  "Europe/Belfast",
-  "Europe/Belgrade",
-  "Europe/Berlin",
-  "Europe/Bratislava",
-  "Europe/Brussels",
-  "Europe/Bucharest",
-  "Europe/Budapest",
-  "Europe/Busingen",
-  "Europe/Chisinau",
-  "Europe/Copenhagen",
-  "Europe/Dublin",
-  "Europe/Gibraltar",
-  "Europe/Guernsey",
-  "Europe/Helsinki",
-  "Europe/Isle_of_Man",
-  "Europe/Istanbul",
-  "Europe/Jersey",
-  "Europe/Kaliningrad",
-  "Europe/Kiev",
-  "Europe/Kirov",
-  "Europe/Kyiv",
-  "Europe/Lisbon",
-  "Europe/Ljubljana",
-  "Europe/London",
-  "Europe/Luxembourg",
-  "Europe/Madrid",
-  "Europe/Malta",
-  "Europe/Mariehamn",
-  "Europe/Minsk",
-  "Europe/Monaco",
-  "Europe/Moscow",
-  "Europe/Nicosia",
-  "Europe/Oslo",
-  "Europe/Paris",
-  "Europe/Podgorica",
-  "Europe/Prague",
-  "Europe/Riga",
-  "Europe/Rome",
-  "Europe/Samara",
-  "Europe/San_Marino",
-  "Europe/Sarajevo",
-  "Europe/Saratov",
-  "Europe/Simferopol",
-  "Europe/Skopje",
-  "Europe/Sofia",
-  "Europe/Stockholm",
-  "Europe/Tallinn",
-  "Europe/Tirane",
-  "Europe/Tiraspol",
-  "Europe/Ulyanovsk",
-  "Europe/Uzhgorod",
-  "Europe/Vaduz",
-  "Europe/Vatican",
-  "Europe/Vienna",
-  "Europe/Vilnius",
-  "Europe/Volgograd",
-  "Europe/Warsaw",
-  "Europe/Zagreb",
-  "Europe/Zaporozhye",
-  "Europe/Zurich",
-  "GB",
-  "GB-Eire",
-  "GMT",
-  "GMT+0",
-  "GMT-0",
-  "GMT0",
-  "Greenwich",
-  "HST",
-  "Hongkong",
-  "Iceland",
-  "Indian/Antananarivo",
-  "Indian/Chagos",
-  "Indian/Christmas",
-  "Indian/Cocos",
-  "Indian/Comoro",
-  "Indian/Kerguelen",
-  "Indian/Mahe",
-  "Indian/Maldives",
-  "Indian/Mauritius",
-  "Indian/Mayotte",
-  "Indian/Reunion",
-  "Iran",
-  "Israel",
-  "Jamaica",
-  "Japan",
-  "Kwajalein",
-  "Libya",
-  "MET",
-  "MST",
-  "MST7MDT",
-  "Mexico/BajaNorte",
-  "Mexico/BajaSur",
-  "Mexico/General",
-  "NZ",
-  "NZ-CHAT",
-  "Navajo",
-  "PRC",
-  "PST8PDT",
-  "Pacific/Apia",
-  "Pacific/Auckland",
-  "Pacific/Bougainville",
-  "Pacific/Chatham",
-  "Pacific/Chuuk",
-  "Pacific/Easter",
-  "Pacific/Efate",
-  "Pacific/Enderbury",
-  "Pacific/Fakaofo",
-  "Pacific/Fiji",
-  "Pacific/Funafuti",
-  "Pacific/Galapagos",
-  "Pacific/Gambier",
-  "Pacific/Guadalcanal",
-  "Pacific/Guam",
-  "Pacific/Honolulu",
-  "Pacific/Johnston",
-  "Pacific/Kanton",
-  "Pacific/Kiritimati",
-  "Pacific/Kosrae",
-  "Pacific/Kwajalein",
-  "Pacific/Majuro",
-  "Pacific/Marquesas",
-  "Pacific/Midway",
-  "Pacific/Nauru",
-  "Pacific/Niue",
-  "Pacific/Norfolk",
-  "Pacific/Noumea",
-  "Pacific/Pago_Pago",
-  "Pacific/Palau",
-  "Pacific/Pitcairn",
-  "Pacific/Pohnpei",
-  "Pacific/Ponape",
-  "Pacific/Port_Moresby",
-  "Pacific/Rarotonga",
-  "Pacific/Saipan",
-  "Pacific/Samoa",
-  "Pacific/Tahiti",
-  "Pacific/Tarawa",
-  "Pacific/Tongatapu",
-  "Pacific/Truk",
-  "Pacific/Wake",
-  "Pacific/Wallis",
-  "Pacific/Yap",
-  "Poland",
-  "Portugal",
-  "ROC",
-  "ROK",
-  "Singapore",
-  "Turkey",
-  "UCT",
-  "US/Alaska",
-  "US/Aleutian",
-  "US/Arizona",
-  "US/Central",
-  "US/East-Indiana",
-  "US/Eastern",
-  "US/Hawaii",
-  "US/Indiana-Starke",
-  "US/Michigan",
-  "US/Mountain",
-  "US/Pacific",
-  "US/Samoa",
-  "UTC",
-  "Universal",
+  ...
   "W-SU",
   "WET",
   "Zulu"
@@ -2952,7 +2493,7 @@ dschedule -s -l
 +--------------+-------------------+-------------------------------------------------+-----------+
 ```
 
-Then of course you can use --swarm --list --verbose to view where the workers are deployed in the cluster:
+Then of course you can use `--swarm` `--list` `--verbose` to view where the workers are deployed in the cluster:
 ```bash
 dschedule -S -l -v
 dock-schedule-1 (192.168.122.110) [Leader]
