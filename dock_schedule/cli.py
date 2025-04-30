@@ -604,7 +604,7 @@ def parse_job_result_args(args: dict):
 
 
 def job_results(parent_args: list = None):
-    args = ArgParser('Dock Schedule: Run Job', parent_args, {
+    args = ArgParser('Dock Schedule: Job Results', parent_args, {
         'id': {
             'short': 'i',
             'help': 'ID of the job to get results for',

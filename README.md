@@ -1922,12 +1922,11 @@ Job Schedule:
 
 5. Run job manually:
 
-You can manually run jobs using the `--run` option. This will create a new job and send it to the scheduler. The scheduler
-probes the manual jobs every 5 seconds so there may be a delay in the job execution especially if the job queue is
-already backlogged. You can wait for the job to complete using the `--wait` option if desired. You can select to run
-a predefined cron job using the `--id` option and providing the the job ID to run. You can also specify the job
-parameters for the manual run similar to creating a cron job using the `--create` minus the frequency the job should
-run.
+You can manually run jobs using the `--run` option. This will create a new job and send it to the scheduler. There may
+be a delay in the job execution especially if the job queue is already backlogged. You can wait for the job to complete
+using the `--wait` option if desired. You can select to run a predefined cron job using the `--id` option and providing
+the the job ID to run. You can also specify the job parameters for the manual run similar to creating a cron job using
+the `--create` minus the frequency the job should run.
 
 Command Options:
 ```bash
@@ -2050,6 +2049,29 @@ dschedule -j -r -n remote-test -t ansible -r remote_cmd.yml -H dock-schedule-2=1
 [2025-04-30 18:35:51,644][INFO][schedule,325]: Job completed successfully
 ```
 
+3. Scheduler API
+
+The scheduler service runs a web server on port 6000 and the proxy service handles the requests to the scheduler.
+You can use curl or any other HTTP client to send requests to the scheduler API. On the swarm hosts you can utilize the
+the overlay network and use hostname `proxy` or `127.0.0.1` and port `6000` to access the scheduler API. If you want to
+access the API outside of the swarm then you will need to open up port `6000` on the swarm hosts and then use the swarm
+host IP to send job request to the scheduler.
+
+```bash
+curl -k -X POST https://proxy:6000/run-job \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test-job1", "type": "python3", "run": "test.py", "args": ["0"]}'
+
+curl -k -X POST https://127.0.0.1:6000/run-job \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test-job1", "type": "python3", "run": "test.py", "args": ["0"]}'
+
+# outside of the swarm:
+curl -k -X POST https://192.168.122.110:6000/run-job \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test-job1", "type": "python3", "run": "test.py", "args": ["0"]}'
+```
+
 6. Results
 
 You can use the `--results` option to pull job result data as well as get the backlog of pending jobs to help you
@@ -2071,7 +2093,7 @@ Commands Options:
 dschedule -j -R -h
 usage: dschedule [-h] [-i ID] [-n NAME] [-l LIMIT] [-f {success,failed,scheduled}] [-v]
 
-Dock Schedule: Run Job
+Dock Schedule: Job Results
 
 options:
   -h, --help            show this help message and exit

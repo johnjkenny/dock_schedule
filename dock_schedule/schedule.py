@@ -454,7 +454,7 @@ class Schedule(Utils):
         return False
 
     def run_job(self, job: Dict):
-        if job.get('name', '') == 'GENERATE':
+        if job.get('name', '') in ['GENERATE', '', None]:
             job['name'] = f'manual-{job.get("type")}-{job.get("run")}'
         if self.__check_job_run_file_exists(job.get('type'), job.get('run')):
             if job.get('type') == 'ansible':
