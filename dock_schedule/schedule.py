@@ -319,13 +319,16 @@ class Schedule(Utils):
                     if state and state.get('state') == 'done':
                         scheduled = True
                 if scheduled:
-                    result = self.__db.get_one('jobs', {'_id': job_id}, {'result': 1, 'error': 1})
+                    result = self.__db.get_one('jobs', {'_id': job_id}, {'result': 1, 'errors': 1})
                     if result and result.get('result') is not None:
                         if result['result'] is True:
                             self.log.info('Job completed successfully')
                             return True
                         else:
-                            self.log.error(f'Job failed: {result.get("error")}')
+                            msg = 'Job failed:'
+                            for error in result.get('errors', []):
+                                msg += f'\n  {error}'
+                            self.log.error(msg)
                             return False
                 sleep(5)
                 max_wait -= 5
@@ -359,10 +362,9 @@ class Schedule(Utils):
         job['expiryTime'] = datetime.now() + timedelta(hours=1)
         job['state'] = 'pending'
         if self.__db.insert_one('scheduledJob', job):
+            self.log.info(f'Successfully sent job {job["_id"]} "{job.get("name")}" to scheduler')
             if wait:
-                self.log.info(f'Job {job.get("name")} sent to scheduler successfully. Waiting for completion...')
                 return self.__wait_for_job_completion(job['_id'])
-            self.log.info(f'Job {job.get("name")} sent to scheduler successfully')
             return True
         else:
             self.log.error(f'Failed to send job {job.get("name")} to scheduler')
@@ -457,12 +459,14 @@ class Schedule(Utils):
             return self._display_info(f'Job Results:\n{json.dumps(results, indent=2, cls=DateTimeEncoder)}')
         for r in results:
             color = self.__determine_result_color(r.get('result'))
-            error = r.get('error', 'N/A') if color == 'red' else ''
+            errors = r.get('errors', [])
             msg = f'ID: {r.get('_id')}, Name: {r.get("name")}, State: {r.get("state")}, Result: {r.get("result")}, '
             if r.get('end'):
                 msg += f'Duration: {self.__convert_timedelta_to_units(r.get("end") - r.get("start"))}'
             else:
                 msg += 'Duration: N/A'
-            if error:
-                msg += f'\n  Error: {error}'
+            if errors:
+                for error in errors:
+                    msg += f'\n  {error}'
             Color().print_message(msg + '\n', color)
+        return True

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import ssl
+import json
 import logging
 from time import sleep, gmtime
 from threading import Thread, Event
-from json import loads
 from typing import Dict
 from tempfile import TemporaryDirectory
 from urllib.parse import quote_plus
@@ -408,7 +408,7 @@ class Worker():
 
     def __convert_job_request(self, job_request: bytes):
         try:
-            job = loads(job_request.decode())
+            job = json.loads(job_request.decode())
             if isinstance(job, dict):
                 return job
             self.log.error(f'Job request is not a dictionary: {type(job)}')
@@ -485,21 +485,33 @@ class Worker():
     def __handle_result(self, result: ansible_runner.runner.Runner, job: Dict):
         job['state'] = 'completed'
         job['end'] = datetime.now()
+        job['tasks'] = []
+        for event in result.events:
+            if event.get('event') not in ['runner_on_ok', 'runner_on_failed']:
+                continue
+            data = event.get('event_data', {})
+            res = data.get('res', {})
+            task_info = {
+                'task': data.get('task', 'Unknown'),
+                'host': data.get('host', 'Unknown'),
+                'rc': res.get('rc', -1),
+                'stdin': res.get('cmd', []),
+                'stdout': res.get('stdout_lines', []),
+                'stderr': res.get('stderr_lines', []),
+                'msg': res.get('msg', ''),
+            }
+            if event.get('event') == 'runner_on_failed':
+                msg = res.get('stderr', '') or task_info.get('msg')
+                error = f"Task: {task_info.get('task')}, Host: {task_info.get('host')}, Error: {msg}"
+                self.log.error(error)
+                job['errors'].append(error)
+            job['tasks'].append(task_info)
         if result.rc == 0:
             self.log.info(f"Job completed successfully: {job.get("name")} {job.get("_id")[:8]}")
             job['result'] = True
         else:
             job['result'] = False
-            for event in result.events:
-                if event.get('event') == 'runner_on_failed':
-                    data = event.get('event_data', {})
-                    task = data.get('task', 'unknown')
-                    host = data.get('host', 'unknown')
-                    msg = data.get('res', {}).get('stderr', '') or data.get('res', {}).get('msg', '')
-                    error = f"Task '{task}' failed on host '{host}': {msg}"
-                    self.log.error(error)
-                    job['error'] = error
-                    break
+            self.log.error(f"Job failed: {job.get('name')} {job.get('_id')[:8]}")
         self.__db.update_one({'_id': job.get('_id')}, {'$set': job})
         return job['result']
 
