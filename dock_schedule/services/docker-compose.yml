@@ -195,7 +195,7 @@ services:
     volumes:
       - /opt/dock-schedule/mongodb/data:/data/db
     networks:
-      - dock-schedule-job-db
+      - dock-schedule-mongodb
       - dock-schedule-proxy
     ports:
       - 27017:27017
@@ -222,7 +222,7 @@ services:
     image: registry:5000/dschedule_mongodb_scraper:1.0.0
     build: /opt/dock-schedule/mongodb_scraper
     networks:
-      - dock-schedule-job-db
+      - dock-schedule-mongodb
       - dock-schedule-proxy
     secrets:
       - mongo_user
@@ -250,9 +250,10 @@ services:
     build: /opt/dock-schedule/scheduler
     volumes:
       - /opt/dock-schedule/jobs/crons.json:/app/crons.json
+      - /opt/dock-schedule/scheduler/scheduler.py:/app/scheduler.py
     networks:
       - dock-schedule-broker
-      - dock-schedule-job-db
+      - dock-schedule-mongodb
     secrets:
       - broker_user
       - broker_passwd
@@ -284,9 +285,10 @@ services:
     volumes:
       - /opt/dock-schedule/ansible:/app/ansible
       - /opt/dock-schedule/jobs:/app/jobs
+      - /opt/dock-schedule/worker/worker.py:/app/worker.py
     networks:
       - dock-schedule-broker
-      - dock-schedule-job-db
+      - dock-schedule-mongodb
     secrets:
       - broker_user
       - broker_passwd
@@ -298,7 +300,7 @@ services:
       - worker_crt
       - worker_key
     deploy:
-      replicas: 3
+      replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -314,8 +316,8 @@ networks:
     name: dock-schedule-broker
     driver: overlay
     external: true
-  dock-schedule-job-db:
-    name: dock-schedule-job-db
+  dock-schedule-mongodb:
+    name: dock-schedule-mongodb
     driver: overlay
     external: true
   dock-schedule-proxy:

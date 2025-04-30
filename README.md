@@ -1069,7 +1069,7 @@ dschedule -c -l -v
   "LocalVolumes": "0",
   "Mounts": "/opt/dock-sche\u2026,/opt/dock-sche\u2026",
   "Names": "dock-schedule_worker.1.1bemk62ixyn6hkmthl1ejxo1x",
-  "Networks": "dock-schedule-broker,dock-schedule-job-db",
+  "Networks": "dock-schedule-broker,dock-schedule-mongodb",
   "Ports": "",
   "RunningFor": "11 minutes ago",
   "Size": "0B",
@@ -1133,7 +1133,7 @@ dschedule -c -l -v
   "LocalVolumes": "0",
   "Mounts": "/opt/dock-sche\u2026,/opt/dock-sche\u2026",
   "Names": "dock-schedule_worker.1.wlamd094qf07ee7ksdyfrj972",
-  "Networks": "dock-schedule-broker,dock-schedule-job-db",
+  "Networks": "dock-schedule-broker,dock-schedule-mongodb",
   "Ports": "",
   "RunningFor": "14 minutes ago",
   "Size": "0B",
@@ -1165,7 +1165,7 @@ dschedule -c -l -v
   "LocalVolumes": "0",
   "Mounts": "/opt/dock-sche\u2026",
   "Names": "dock-schedule_scheduler.1.weggj7j7b6mealfych52fgcw8",
-  "Networks": "dock-schedule-broker,dock-schedule-job-db",
+  "Networks": "dock-schedule-broker,dock-schedule-mongodb",
   "Ports": "",
   "RunningFor": "25 minutes ago",
   "Size": "0B",
@@ -1181,7 +1181,7 @@ dschedule -c -l -v
   "LocalVolumes": "0",
   "Mounts": "/opt/dock-sche\u2026,/opt/dock-sche\u2026",
   "Names": "dock-schedule_worker.1.iz90su91mfrkzrzeb4qo584q5",
-  "Networks": "dock-schedule-broker,dock-schedule-job-db",
+  "Networks": "dock-schedule-broker,dock-schedule-mongodb",
   "Ports": "",
   "RunningFor": "25 minutes ago",
   "Size": "0B",
@@ -1971,7 +1971,7 @@ options:
   -w, --wait            Wait for the job to finish before returning. Default: False
 ```
 
-
+1. Run Local Jobs (on worker containers in the swarm):
 ```bash
 # Drop --wait, -w to run job in background
 dschedule -j -r -i 69112dee-97d0-47a9-9a5d-b63e3f15e51c -w
@@ -2027,6 +2027,12 @@ dschedule -j -r -t ansible -r test.yml -e exit_code=0 -w
 dschedule -j -r -t ansible -r test.yml -e exit_code=1 -w
 [2025-04-26 17:27:24,828][INFO][utils,601]: Job manual-ansible-test.yml sent to scheduler successfully. Waiting for completion...
 [2025-04-26 17:27:29,830][ERROR][utils,567]: Job failed: Task 'Fail if exit_code is not 0' failed on host 'localhost': Invalid exit code: 1
+```
+
+
+2. Run Remote Jobs (on remote ansible hosts):
+```bash
+
 ```
 
 6. Results

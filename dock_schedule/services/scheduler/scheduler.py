@@ -570,7 +570,7 @@ class JobScheduler():
                 'start': None,
                 'end': None,
                 'result': None,
-                'error': None,
+                'errors': [],
             }
             self.__publisher.send_msg(dumps(job).encode(), job.get('_id'))
             job['expiryTime'] = datetime.now() + timedelta(days=7)

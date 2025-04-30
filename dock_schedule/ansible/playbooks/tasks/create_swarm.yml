@@ -11,7 +11,7 @@
   changed_when: true
 
 - name: Create Job DB Network
-  ansible.builtin.command: "docker network create dock-schedule-job-db --driver overlay --attachable"
+  ansible.builtin.command: "docker network create dock-schedule-mongodb --driver overlay --attachable"
   changed_when: true
 
 - name: Create Broker Secrets

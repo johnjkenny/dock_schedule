@@ -1,0 +1,10 @@
+- name: Ansible Remote Host Test Playbook
+  hosts: all
+  gather_facts: false
+  vars:
+    command: ''
+  tasks:
+    - name: Run command
+      ansible.builtin.command: "{{ command }}"
+      register: command_result
+      changed_when: true
