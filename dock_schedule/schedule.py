@@ -1,4 +1,5 @@
 import json
+import requests
 from pathlib import Path
 from logging import Logger
 from typing import Dict, List
@@ -11,6 +12,100 @@ from pytz import all_timezones_set
 
 from dock_schedule.color import Color
 from dock_schedule.utils import Utils, Mongo
+
+
+class WebClient():
+    def __init__(self, logger: Logger):
+        self.log = logger
+
+    @property
+    def __certs(self):
+        return {'cert': ('/etc/docker/host.crt', '/etc/docker/host.key'), 'verify': '/etc/docker/ca.crt'}
+
+    def _is_running_check(self) -> bool:
+        """Check if the server is running. Should always return 200 unless the server is not running or the client
+        cannot communicate with the server
+
+        Returns:
+            bool: True if server is running, False otherwise
+        """
+        url = 'https://proxy:6000/is-running'
+        rsp = requests.get(url, **self.__certs)
+        if rsp.status_code == 200:
+            return True
+        self.log.error(f'URL {url} is not running: {rsp.reason}')
+        return False
+
+    def __send_post_request(self, url: str, payload: bytes) -> int:
+        """Send a POST request to the server
+
+        Args:
+            url (str): url to send the request to
+            payload (bytes): payload to send
+
+        Returns:
+            int: status code of the request
+        """
+        try:
+            return requests.post(url, payload, **self.__certs).status_code
+        except requests.exceptions.ConnectionError:
+            return 405  # Connection Error
+        except KeyboardInterrupt:
+            return 200
+        except Exception:
+            self.log.exception('Error sending scheduler request')
+        return 500
+
+    def __post_retry_request(self, url: str, payload: bytes) -> bool:
+        """Handler to retry sending a POST request to the server incase of a failure. Will retry 3 times before failing.
+        Will self authenticate if the server returns a 401 or 419 status codes. Will stop the retry if the
+        authentication fails
+
+        Args:
+            url (str): url to send the request to
+            payload (bytes): payload to send
+
+        Returns:
+            bool: True if the message was sent successfully, False otherwise
+        """
+        attempt = 1
+        while attempt < 4:
+            rsp = self.__send_post_request(url, payload)
+            if rsp == 200:
+                return True
+            elif rsp == 405:
+                self.log.info(f'Failed to connect to scheduler web server on attempt {attempt} of 3')
+                sleep(2)
+            attempt += 1
+        return False
+
+    def __send_msg(self, msg: Dict, uri: str) -> bool:
+        """Send a message to the server. Enforces the message to be a dict type. Encrypts the message before sending
+
+        Args:
+            msg (dict): message to send to the server
+
+        Returns:
+            bool: True if the message was sent successfully, False otherwise
+        """
+        if isinstance(msg, dict):
+            url = f'https://proxy:6000{uri}'
+            try:
+                payload = json.dumps(msg).encode()
+            except Exception:
+                self.log.exception('Failed to encode message to JSON')
+                return False
+            if payload:
+                return self.__post_retry_request(url, payload)
+        else:
+            self.log.error(f'Invalid message type received: {type(msg)}')
+        return False
+
+    def send_run_job_request(self, msg: Dict) -> bool:
+        return self.__send_msg(msg, '/run-job')
+
+    def send_job_update_request(self) -> bool:
+        return self.__send_msg({'update': True}, '/job-update')
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -44,11 +139,8 @@ class Schedule(Utils):
             return False
         return True
 
-    def __set_update_flag(self):
-        if not self.__db.update_one('cronUpdate', {'_id': 1}, {'$set': {'update': True}}):
-            self.log.error('Failed to set update flag')
-            return False
-        return True
+    def __send_job_update_state(self):
+        return WebClient(self.log).send_job_update_request()
 
     @property
     def __schedule_keys(self):
@@ -102,7 +194,7 @@ class Schedule(Utils):
                     return False
             if self.__db.insert_one('crons', job):
                 self.log.info(f'Job {job.get("name")} created successfully')
-                return self.__set_update_flag()
+                return self.__send_job_update_state()
         self.log.error(f'Failed to create job {job.get("name")}')
         return False
 
@@ -199,7 +291,7 @@ class Schedule(Utils):
             return False
         if self.__db.delete_one('crons', {'_id': job_id}):
             self.log.info(f'Successfully deleted job ID {job_id}')
-            return self.__set_update_flag()
+            return self.__send_job_update_state()
         self.log.error(f'Failed to delete job ID {job_id}')
         return False
 
@@ -257,7 +349,7 @@ class Schedule(Utils):
         job.update(data)
         if self.__db.update_one('crons', {'_id': job_id}, {'$set': job}):
             self.log.info(f'Successfully updated job ID {job_id}')
-            return self.__set_update_flag()
+            return self.__send_job_update_state()
         self.log.error(f'Failed to update job ID {job_id}')
         return False
 
@@ -312,26 +404,20 @@ class Schedule(Utils):
 
     def __wait_for_job_completion(self, job_id: str, max_wait: int = 1800) -> bool:
         try:
-            scheduled = False
             while max_wait > 0:
-                if not scheduled:
-                    state = self.__db.get_one('scheduledJob', {'_id': job_id}, {'state': 1})
-                    if state and state.get('state') == 'done':
-                        scheduled = True
-                if scheduled:
-                    result = self.__db.get_one('jobs', {'_id': job_id}, {'result': 1, 'errors': 1})
-                    if result and result.get('result') is not None:
-                        if result['result'] is True:
-                            self.log.info('Job completed successfully')
-                            return True
-                        else:
-                            msg = 'Job failed:'
-                            for error in result.get('errors', []):
-                                msg += f'\n  {error}'
-                            self.log.error(msg)
-                            return False
-                sleep(5)
-                max_wait -= 5
+                result = self.__db.get_one('jobs', {'_id': job_id}, {'result': 1, 'errors': 1})
+                if result and result.get('result') is not None:
+                    if result['result'] is True:
+                        self.log.info('Job completed successfully')
+                        return True
+                    else:
+                        msg = 'Job failed:'
+                        for error in result.get('errors', []):
+                            msg += f'\n  {error}'
+                        self.log.error(msg)
+                        return False
+                sleep(1)
+                max_wait -= 1
             self.log.error('Failed to wait for job completion in allotted time')
         except KeyboardInterrupt:
             self.log.info('Waiting for job completion interrupted')
@@ -359,15 +445,12 @@ class Schedule(Utils):
 
     def __create_manual_job(self, job: Dict, wait: bool = False) -> bool:
         job['_id'] = str(uuid4())
-        job['expiryTime'] = datetime.now() + timedelta(hours=1)
-        job['state'] = 'pending'
-        if self.__db.insert_one('scheduledJob', job):
+        if WebClient(self.log).send_run_job_request(job):
             self.log.info(f'Successfully sent job {job["_id"]} "{job.get("name")}" to scheduler')
             if wait:
                 return self.__wait_for_job_completion(job['_id'])
             return True
-        else:
-            self.log.error(f'Failed to send job {job.get("name")} to scheduler')
+        self.log.error(f'Failed to send job {job.get("name")} to scheduler')
         return False
 
     def run_job(self, job: Dict):

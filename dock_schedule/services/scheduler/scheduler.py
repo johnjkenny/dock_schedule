@@ -4,6 +4,8 @@ import ssl
 import logging
 from time import sleep, gmtime
 from threading import Thread, Event
+from multiprocessing import Process, Queue
+from queue import Empty
 from uuid import uuid4
 from json import dumps, loads
 from typing import Dict
@@ -11,6 +13,8 @@ from urllib.parse import quote_plus
 from datetime import datetime, timedelta
 
 import schedule
+import uvicorn
+from fastapi import FastAPI, Request, Response
 from pika import SelectConnection, BaseConnection, BasicProperties
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.credentials import PlainCredentials
@@ -32,6 +36,226 @@ def get_logger():
         stream_handler.setFormatter(formatter)
         log.addHandler(stream_handler)
     return log
+
+
+class WebServer():
+    def __init__(self, queue: Queue, logger: logging.Logger):
+        self.log = logger
+        self._app = FastAPI()
+        self.__msg_queue = queue
+        self.__thread: Thread | None = None
+        self.__thread_stop = Event()
+        self.__process: Process | None = None
+
+        @self._app.get('/is-running')
+        def is_running_route():
+            """Check if the server is running route
+
+            Returns:
+                Response: 200 response if the server is running
+            """
+            return Response('Web-Server is running', 200)
+
+        @self._app.post('/run-job')
+        async def receive_run_job_route(request: Request) -> Response:
+            """Submit message route. The main route for receiving messages from a client
+
+            Args:
+                request (Request): request object
+
+            Returns:
+                Response: response based on the message received
+            """
+            raw_msg = await request.body()
+            state = ('failed', 500)
+            try:
+                if isinstance(raw_msg, (bytes, str)):
+                    job = loads(raw_msg)
+                    if isinstance(job, dict):
+                        state = ('success', 200)
+                        job['request_type'] = 'run_job'
+                        self.__msg_queue.put(job)
+                    else:
+                        self.log.error(f'Invalid message type received: {type(job)}')
+                else:
+                    self.log.error(f'Invalid message type received: {type(raw_msg)}')
+            except Exception:
+                self.log.exception('Failed to handle run job request')
+                state = ('failed', 500)
+            del raw_msg
+            return Response(*state)
+
+        @self._app.post('/job-update')
+        async def receive_job_update_route(request: Request) -> Response:
+            """Submit message route. The main route for receiving messages from a client
+
+            Args:
+                request (Request): request object
+
+            Returns:
+                Response: response based on the message received
+            """
+            raw_msg = await request.body()
+            state = ('failed', 500)
+            try:
+                if isinstance(raw_msg, (bytes, str)):
+                    job = loads(raw_msg)
+                    if isinstance(job, dict):
+                        state = ('success', 200)
+                        job['request_type'] = 'job_update'
+                        self.__msg_queue.put(job)
+                    else:
+                        self.log.error(f'Invalid message type received: {type(job)}')
+                else:
+                    self.log.error(f'Invalid message type received: {type(raw_msg)}')
+            except Exception:
+                self.log.exception('Failed to handle run job request')
+                state = ('failed', 500)
+            del raw_msg
+            return Response(*state)
+
+    @property
+    def __certs(self):
+        return {
+            'ssl_ca_certs': '/app/ca.crt',
+            'ssl_certfile': '/app/host.crt',
+            'ssl_keyfile': '/app/host.key',
+            'ssl_cert_reqs': ssl.CERT_REQUIRED
+        }
+
+    @property
+    def is_running(self) -> bool:
+        """Check if the web server is running
+
+        Returns:
+            bool: True if the server is running, False otherwise
+        """
+        if self.__thread is not None:
+            return self.__thread.is_alive()
+        return False
+
+    def __start_web_server_process(self) -> bool:
+        """Start the web server process in a separate process
+
+        Returns:
+            bool: True if the server started successfully, False otherwise
+        """
+        if self.__process and self.__process.is_alive():
+            self.log.info('Server is already running')
+            return True
+        try:
+            self.__process = Process(target=self.__start_web_server, name='scheduler-web-server', daemon=True)
+            self.__process.start()
+            sleep(1)  # Give the server time to start
+            return True
+        except Exception:
+            self.log.exception('Failed to start web server process')
+        return False
+
+    def __start_web_server(self) -> bool:
+        """The web server process. Stays running and is handled by the parent process
+
+        Returns:
+            bool: True on successful start and stop. False otherwise
+        """
+        try:
+            uvicorn.run(self._app, host='0.0.0.0', port=6000, proxy_headers=True, **self.__certs)
+            return True
+        except Exception:
+            self.log.exception('Exception occurred in web server')
+        return False
+
+    def __terminate_web_process(self) -> bool:
+        """Terminate the web server process
+
+        Returns:
+            bool: True if the server terminated successfully, False otherwise
+        """
+        if self.__process and self.__process.is_alive():
+            self.__process.terminate()
+            self.__process.join(3)
+            if self.__process.is_alive():
+                self.log.error('Failed to terminate web server process')
+                return False
+            self.__process = None
+            self.log.info('Web server process terminated')
+        return True
+
+    def __web_thread(self) -> bool:
+        """Web server cleaner thread. Stats the web web server process then checks for expired clients every 60 seconds.
+        Exits if the web process stops running. Receives a stop signal from the parent thread to stop the process.
+
+        Returns:
+            bool: True if the thread ran successfully, False otherwise
+        """
+        try:
+            if self.__start_web_server_process():
+                cnt = 0
+                while not self.__thread_stop.is_set():
+                    sleep(1)
+                    cnt += 1
+                    if cnt == 60:
+                        if not self.__process.is_alive():
+                            self.log.error('Web server process has stopped')
+                            return False
+                        cnt = 0
+                return self.__terminate_web_process()
+            return False
+        except Exception:
+            self.log.exception('Exception occurred in web cleaner thread')
+            return False
+
+    def __create_web_thread(self) -> bool:
+        """Create the web server cleaner thread
+
+        Returns:
+            bool: True if the thread was created successfully, False otherwise
+        """
+        try:
+            self.__thread = Thread(target=self.__web_thread, name='scheduler-web-thread', daemon=True)
+            self.__thread.start()
+            return True
+        except Exception:
+            self.log.exception('Failed to create web server thread')
+            return False
+
+    def start(self) -> bool:
+        """Start the web server cleaner thread and start the web server
+
+        Returns:
+            bool: True if the server started successfully, False otherwise
+        """
+        self.log.info('Starting scheduler web server')
+        self.__thread_stop.clear()
+        if self.__thread is not None:
+            if self.__thread.is_alive():
+                self.log.info('Scheduler web server is already running')
+                return True
+            self.__thread = None
+        return self.__create_web_thread()
+
+    def stop(self) -> bool:
+        """Stop the web server and the web server cleaner thread
+
+        Returns:
+            bool: True if the server stopped successfully, False otherwise
+        """
+        self.log.info('Stopping scheduler web server')
+        try:
+            if self.__thread is not None:
+                if self.__thread.is_alive():
+                    self.__thread_stop.set()
+                    self.__thread.join(5)
+                    if self.__thread.is_alive():
+                        self.log.error('Failed to stop web server thread')
+                        return False
+                self.__thread = None
+                return True
+            self.log.info('Scheduler web server is not running')
+            return True
+        except Exception:
+            self.log.exception('Failed to stop scheduler web server')
+        return False
 
 
 class Mongo():
@@ -498,9 +722,13 @@ class JobScheduler():
         self.stop_trigger = Event()
         self.__publisher = JobPublisher(self.log)
         self.__db = Mongo(self.log)
+        self.__run_job_queue = Queue()
+        self.__web_server = WebServer(self.__run_job_queue, self.log)
         self._crons = schedule
         if not self.__publisher.start():
             raise Exception('Failed to start job publisher')
+        if not self.__web_server.start():
+            raise Exception('Failed to start web server')
 
     def __enter__(self):
         return self
@@ -534,26 +762,27 @@ class JobScheduler():
     def __get_crons(self):
         return self.__db.get_all('crons', {'disabled': False})
 
-    def get_cron_update_state(self):
-        state: dict = self.__db.get_one('cronUpdate', {'_id': 1})
-        if state:
-            if state.get('update', False):
-                if not self.__db.update_one('cronUpdate', {'_id': 1}, {'$set': {'update': False}}):
-                    self.log.error('Failed to update cron update state')
-                    return False
-                return True
-        else:
-            self.log.error('Failed to get cron update state')
-        return False
-
     def get_scheduled_run_now_jobs(self):
-        jobs = self.__db.get_all('scheduledJob', {'state': 'pending'})
-        if jobs:
-            for job in jobs:
+        jobs = []
+        while True:
+            try:
+                item = self.__run_job_queue.get(block=False)
+                jobs.append(item)
+            except Empty:
+                break
+        update = False
+        for job in jobs:
+            if job.get('request_type') == 'run_job':
                 if not self._run_cron(job, job.get('_id')):
-                    self.log.error(f'Failed to schedule job {job.get("name")}')
-                if not self.__db.update_one('scheduledJob', {'_id': job.get('_id')}, {'$set': {'state': 'done'}}):
-                    self.log.error(f'Failed to update job {job.get("name")} schedule state to done')
+                    self.log.error(f'Failed to schedule job {job.get("_id")} {job.get("name")}')
+            elif job.get('request_type') == 'job_update':
+                update = True
+        if update:
+            if not self.set_cron_schedule():
+                self.log.error('Failed to update cron schedule')
+                return False
+            self.log.info('Updated cron schedule')
+        return True
 
     def _run_cron(self, cron: Dict, job_id: str = None):
         try:
@@ -593,21 +822,10 @@ def main():
     with JobScheduler() as scheduler:
         if not scheduler.set_cron_schedule():
             exit(1)
-        cnt = 0
         while not scheduler.stop_trigger.is_set():
             scheduler._crons.run_pending()
-            if cnt % 5 == 0:
-                scheduler.get_scheduled_run_now_jobs()
-            if cnt == 60:
-                if scheduler.get_cron_update_state():
-                    if scheduler.set_cron_schedule():
-                        scheduler.log.info('Updated cron schedule')
-                    else:
-                        scheduler.log.error('Failed to update cron schedule')
-                        exit(1)
-                cnt = 0
+            scheduler.get_scheduled_run_now_jobs()
             sleep(1)
-            cnt += 1
     exit(0)
 
 
