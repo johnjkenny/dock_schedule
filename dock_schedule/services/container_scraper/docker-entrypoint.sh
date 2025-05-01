@@ -10,8 +10,3 @@ exec /opt/bitnami/cadvisor/bin/cadvisor \
   -prometheus_endpoint="/metrics"
 
 exit $?
-
-  #-docker-tls \
-  #-docker-tls-ca= \
-  #-docker-tls-cert= \
-  #-docker-tls-key= \

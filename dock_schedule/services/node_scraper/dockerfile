@@ -1,9 +1,9 @@
-FROM prom/node-exporter@sha256:863b62ff9f392b6f472e22b4b670ad1cabb66b3042502ebd4b2cd192733e1bce
+FROM bitnami/node-exporter@sha256:653097383091e922aea65277d4a3525d76e22c0124719902d7ee0e6f95c2f953
 
 USER root
-COPY web_config.yml /etc/prometheus/
+COPY web_config.yml /opt/bitnami/web_config.yml
 COPY docker-entrypoint.sh /custom-entrypoint.sh
-RUN chmod 440 /etc/prometheus/*.yml
+RUN chmod 440 /opt/bitnami/web_config.yml
 RUN chmod +x /custom-entrypoint.sh
 
 ENTRYPOINT ["/custom-entrypoint.sh"]

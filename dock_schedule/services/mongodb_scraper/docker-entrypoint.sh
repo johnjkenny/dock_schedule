@@ -11,7 +11,7 @@ cat /run/secrets/mongodb_scraper_key > /opt/bitnami/host.key
 cat /opt/bitnami/host.crt /opt/bitnami/host.key > /opt/bitnami/host.pem
 chmod 440 /opt/bitnami/host.crt /opt/bitnami/host.key /opt/bitnami/host.pem /opt/bitnami/ca.crt
 
-exec /opt/bitnami/mongodb-exporter/bin/mongodb_exporter \
+exec setpriv --reuid=1001 --regid=0 --clear-groups /opt/bitnami/mongodb-exporter/bin/mongodb_exporter \
   --mongodb.uri=mongodb://mongodb:27017/admin?ssl=true\&tlsCAFile=/opt/bitnami/ca.crt\&tlsCertificateKeyFile=/opt/bitnami/host.pem \
   --mongodb.indexstats-colls="$MONGO_DB" \
   --mongodb.collstats-colls="$MONGO_DB" \
