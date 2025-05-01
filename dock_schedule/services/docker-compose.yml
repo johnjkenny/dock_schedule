@@ -100,7 +100,7 @@ services:
         delay: 5s
         max_attempts: 3
     healthcheck:
-      test: ['CMD', 'pgrep', '-f', 'node_exporter']
+      test: ['CMD', 'pgrep', '-f', 'bin/node_exporter']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -142,7 +142,6 @@ services:
   prometheus:
     image: registry:5000/dschedule_prometheus:1.0.0
     build: /opt/dock-schedule/prometheus
-    user: root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /opt/dock-schedule/prometheus/data:/prometheus

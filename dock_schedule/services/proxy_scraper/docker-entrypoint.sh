@@ -5,7 +5,7 @@ cat /run/secrets/proxy_scraper_crt > /opt/bitnami/host.crt
 cat /run/secrets/proxy_scraper_key > /opt/bitnami/host.key
 chmod 440 /opt/bitnami/host.crt /opt/bitnami/host.key /opt/bitnami/ca.crt
 
-exec /opt/bitnami/nginx-exporter/bin/nginx-prometheus-exporter \
+exec setpriv --reuid=1001 --regid=0 --clear-groups /opt/bitnami/nginx-exporter/bin/nginx-prometheus-exporter \
   --nginx.scrape-uri=https://proxy:9000/metrics \
   --web.listen-address=":9113" \
   --web.telemetry-path="/metrics" \

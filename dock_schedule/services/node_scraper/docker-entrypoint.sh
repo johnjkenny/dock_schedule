@@ -1,15 +1,15 @@
 #!/bin/sh
 
-cat /run/secrets/ca_crt > /etc/prometheus/ca.crt
-cat /run/secrets/node_scraper_crt > /etc/prometheus/host.crt
-cat /run/secrets/node_scraper_key > /etc/prometheus/host.key
-chmod 440 /etc/prometheus/ca.crt /etc/prometheus/host.crt /etc/prometheus/host.key
+cat /run/secrets/ca_crt > /opt/bitnami/ca.crt
+cat /run/secrets/node_scraper_crt > /opt/bitnami/host.crt
+cat /run/secrets/node_scraper_key > /opt/bitnami/host.key
+chmod 440 /opt/bitnami/ca.crt /opt/bitnami/host.crt /opt/bitnami/host.key
 
-exec /bin/node_exporter \
+exec setpriv --reuid=1001 --regid=0 --clear-groups /opt/bitnami/node-exporter/bin/node_exporter \
   --path.rootfs="/rootfs" \
   --path.procfs="/host/proc" \
   --path.sysfs="/host/sys" \
   --collector.filesystem.mount-points-exclude="^/(sys|proc|dev|host|etc)($$|/)" \
   --web.telemetry-path="/metrics" \
   --web.listen-address=":9100" \
-  --web.config.file="/etc/prometheus/web_config.yml"
+  --web.config.file="/opt/bitnami/web_config.yml"

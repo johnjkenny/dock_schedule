@@ -1925,7 +1925,7 @@ Job Schedule:
 You can manually run jobs using the `--run` option. This will create a new job and send it to the scheduler. There may
 be a delay in the job execution especially if the job queue is already backlogged. You can wait for the job to complete
 using the `--wait` option if desired. You can select to run a predefined cron job using the `--id` option and providing
-the the job ID to run. You can also specify the job parameters for the manual run similar to creating a cron job using
+the job ID to run. You can also specify the job parameters for the manual run similar to creating a cron job using
 the `--create` minus the frequency the job should run.
 
 Command Options:
