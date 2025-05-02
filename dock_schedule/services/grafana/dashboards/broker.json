@@ -3,7 +3,6 @@
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 1,
-    "id": null,
     "liveNow": false,
     "panels": [
       {
@@ -18,7 +17,6 @@
           "x": 0,
           "y": 0
         },
-        "id": 11,
         "panels": [],
         "targets": [
           {
@@ -484,7 +482,6 @@
           "x": 0,
           "y": 7
         },
-        "id": 29,
         "panels": [],
         "targets": [
           {
