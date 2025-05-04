@@ -917,7 +917,7 @@
       "fill": 1,
       "gridPos": {
         "h": 10,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 34
       },
@@ -1033,8 +1033,8 @@
       "fill": 1,
       "gridPos": {
         "h": 10,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 34
       },
       "legend": {
@@ -1149,9 +1149,9 @@
       "fill": 1,
       "gridPos": {
         "h": 10,
-        "w": 12,
-        "x": 0,
-        "y": 44
+        "w": 8,
+        "x": 16,
+        "y": 34
       },
       "legend": {
         "alignAsTable": false,
@@ -1451,28 +1451,6 @@
     ],
   "templating": {
     "list": [
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "hide": 2,
-        "includeAll": false,
-        "label": "cluster",
-        "multi": false,
-        "name": "cluster",
-        "options": [],
-        "query": "",
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "custom",
-        "useTags": false
-      },
       {
         "current": {},
         "datasource": {
