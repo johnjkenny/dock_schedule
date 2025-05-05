@@ -23,7 +23,7 @@ from pika.channel import Channel
 from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, OperationFailure
+from pymongo.errors import ConnectionFailure, OperationFailure, ServerSelectionTimeoutError
 
 
 thread_local = local()
@@ -42,226 +42,6 @@ def get_logger():
     return log
 
 
-class WebServer():
-    def __init__(self, queue: Queue, logger: logging.Logger):
-        self.log = logger
-        self._app = FastAPI()
-        self.__msg_queue = queue
-        self.__thread: Thread | None = None
-        self.__thread_stop = Event()
-        self.__process: Process | None = None
-
-        @self._app.get('/is-running')
-        def is_running_route():
-            """Check if the server is running route
-
-            Returns:
-                Response: 200 response if the server is running
-            """
-            return Response('Web-Server is running', 200)
-
-        @self._app.post('/run-job')
-        async def receive_run_job_route(request: Request) -> Response:
-            """Submit message route. The main route for receiving messages from a client
-
-            Args:
-                request (Request): request object
-
-            Returns:
-                Response: response based on the message received
-            """
-            raw_msg = await request.body()
-            state = ('failed', 500)
-            try:
-                if isinstance(raw_msg, (bytes, str)):
-                    job = loads(raw_msg)
-                    if isinstance(job, dict):
-                        state = ('success', 200)
-                        job['request_type'] = 'run_job'
-                        self.__msg_queue.put(job)
-                    else:
-                        self.log.error(f'Invalid message type received: {type(job)}')
-                else:
-                    self.log.error(f'Invalid message type received: {type(raw_msg)}')
-            except Exception:
-                self.log.exception('Failed to handle run job request')
-                state = ('failed', 500)
-            del raw_msg
-            return Response(*state)
-
-        @self._app.post('/job-update')
-        async def receive_job_update_route(request: Request) -> Response:
-            """Submit message route. The main route for receiving messages from a client
-
-            Args:
-                request (Request): request object
-
-            Returns:
-                Response: response based on the message received
-            """
-            raw_msg = await request.body()
-            state = ('failed', 500)
-            try:
-                if isinstance(raw_msg, (bytes, str)):
-                    job = loads(raw_msg)
-                    if isinstance(job, dict):
-                        state = ('success', 200)
-                        job['request_type'] = 'job_update'
-                        self.__msg_queue.put(job)
-                    else:
-                        self.log.error(f'Invalid message type received: {type(job)}')
-                else:
-                    self.log.error(f'Invalid message type received: {type(raw_msg)}')
-            except Exception:
-                self.log.exception('Failed to handle run job request')
-                state = ('failed', 500)
-            del raw_msg
-            return Response(*state)
-
-    @property
-    def __certs(self):
-        return {
-            'ssl_ca_certs': '/app/ca.crt',
-            'ssl_certfile': '/app/host.crt',
-            'ssl_keyfile': '/app/host.key',
-            'ssl_cert_reqs': ssl.CERT_REQUIRED
-        }
-
-    @property
-    def is_running(self) -> bool:
-        """Check if the web server is running
-
-        Returns:
-            bool: True if the server is running, False otherwise
-        """
-        if self.__thread is not None:
-            return self.__thread.is_alive()
-        return False
-
-    def __start_web_server_process(self) -> bool:
-        """Start the web server process in a separate process
-
-        Returns:
-            bool: True if the server started successfully, False otherwise
-        """
-        if self.__process and self.__process.is_alive():
-            self.log.info('Server is already running')
-            return True
-        try:
-            self.__process = Process(target=self.__start_web_server, name='scheduler-web-server', daemon=True)
-            self.__process.start()
-            sleep(1)  # Give the server time to start
-            return True
-        except Exception:
-            self.log.exception('Failed to start web server process')
-        return False
-
-    def __start_web_server(self) -> bool:
-        """The web server process. Stays running and is handled by the parent process
-
-        Returns:
-            bool: True on successful start and stop. False otherwise
-        """
-        try:
-            uvicorn.run(self._app, host='0.0.0.0', port=6000, proxy_headers=True, **self.__certs)
-            return True
-        except Exception:
-            self.log.exception('Exception occurred in web server')
-        return False
-
-    def __terminate_web_process(self) -> bool:
-        """Terminate the web server process
-
-        Returns:
-            bool: True if the server terminated successfully, False otherwise
-        """
-        if self.__process and self.__process.is_alive():
-            self.__process.terminate()
-            self.__process.join(3)
-            if self.__process.is_alive():
-                self.log.error('Failed to terminate web server process')
-                return False
-            self.__process = None
-            self.log.info('Web server process terminated')
-        return True
-
-    def __web_thread(self) -> bool:
-        """Web server cleaner thread. Stats the web web server process then checks for expired clients every 60 seconds.
-        Exits if the web process stops running. Receives a stop signal from the parent thread to stop the process.
-
-        Returns:
-            bool: True if the thread ran successfully, False otherwise
-        """
-        try:
-            if self.__start_web_server_process():
-                cnt = 0
-                while not self.__thread_stop.is_set():
-                    sleep(1)
-                    cnt += 1
-                    if cnt == 60:
-                        if not self.__process.is_alive():
-                            self.log.error('Web server process has stopped')
-                            return False
-                        cnt = 0
-                return self.__terminate_web_process()
-            return False
-        except Exception:
-            self.log.exception('Exception occurred in web cleaner thread')
-            return False
-
-    def __create_web_thread(self) -> bool:
-        """Create the web server cleaner thread
-
-        Returns:
-            bool: True if the thread was created successfully, False otherwise
-        """
-        try:
-            self.__thread = Thread(target=self.__web_thread, name='scheduler-web-thread', daemon=True)
-            self.__thread.start()
-            return True
-        except Exception:
-            self.log.exception('Failed to create web server thread')
-            return False
-
-    def start(self) -> bool:
-        """Start the web server cleaner thread and start the web server
-
-        Returns:
-            bool: True if the server started successfully, False otherwise
-        """
-        self.log.info('Starting scheduler web server')
-        self.__thread_stop.clear()
-        if self.__thread is not None:
-            if self.__thread.is_alive():
-                self.log.info('Scheduler web server is already running')
-                return True
-            self.__thread = None
-        return self.__create_web_thread()
-
-    def stop(self) -> bool:
-        """Stop the web server and the web server cleaner thread
-
-        Returns:
-            bool: True if the server stopped successfully, False otherwise
-        """
-        self.log.info('Stopping scheduler web server')
-        try:
-            if self.__thread is not None:
-                if self.__thread.is_alive():
-                    self.__thread_stop.set()
-                    self.__thread.join(5)
-                    if self.__thread.is_alive():
-                        self.log.error('Failed to stop web server thread')
-                        return False
-                self.__thread = None
-                return True
-            self.log.info('Scheduler web server is not running')
-            return True
-        except Exception:
-            self.log.exception('Failed to stop scheduler web server')
-        return False
-
-
 class Mongo():
     def __init__(self, logger: logging.Logger = None):
         self.log = logger
@@ -277,17 +57,26 @@ class Mongo():
     def client(self):
         if self.__client is None:
             if self.__load_creds():
-                try:
-                    self.__client = MongoClient(
-                        host=self.__host,
-                        tls=True,
-                        tlsCAFile='/app/ca.crt',
-                        tlsCertificateKeyFile='/app/host.pem',
-                    )
-                except ConnectionFailure:
-                    self.log.exception('Failed to connect to MongoDB')
-                except Exception:
-                    self.log.exception('Failed to create MongoDB client')
+                for attempt in range(36):
+                    try:
+                        self.__client = MongoClient(
+                            host=self.__host,
+                            tls=True,
+                            tlsCAFile='/app/ca.crt',
+                            tlsCertificateKeyFile='/app/host.pem',
+                            serverSelectionTimeoutMS=2000
+                        )
+                        self.__client.admin.command('ping')
+                        self.log.info('MongoDB client created successfully')
+                        return self.__client
+                    except ServerSelectionTimeoutError:
+                        self.log.error(f'Failed to connect to MongoDB {attempt + 1}/36')
+                    except ConnectionFailure:
+                        self.log.exception('Failed to connect to MongoDB')
+                    except Exception:
+                        self.log.exception('Failed to create MongoDB client')
+                        return None
+                    sleep(2)
         return self.__client
 
     def __load_creds(self):
@@ -417,6 +206,187 @@ class Mongo():
             except Exception:
                 self.log.exception(f'Failed to delete documents: {query}')
         return False
+
+    def count_documents(self, collection_name: str, query: Dict) -> int:
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.count_documents(query, maxTimeMS=2000)
+            except OperationFailure as error:
+                self.log.error(f'Failed to count documents: {error.details}')
+            except Exception:
+                self.log.exception('Failed to count documents')
+        return 0
+
+
+class WebServer():
+    def __init__(self, queue: Queue, logger: logging.Logger):
+        self.log = logger
+        self._app = FastAPI()
+        self.__db: Mongo | None = None
+        self.__msg_queue = queue
+        self.__process: Process | None = None
+
+        @self._app.get('/is-running')
+        def is_running_route() -> Response:
+            """Check if the server is running route
+
+            Returns:
+                Response: 200 response if the server is running
+            """
+            return Response('Web-Server is running', 200)
+
+        @self._app.get('/metrics')
+        def metrics_route() -> Response:
+            if self.__db is None:
+                self.__db = Mongo(self.log)
+            try:
+                total_jobs = self.__db.count_documents('jobs', {})
+                pending_jobs = self.__db.count_documents('jobs', {'state': 'pending'})
+                running_jobs = self.__db.count_documents('jobs', {'state': 'running'})
+                successful_jobs = self.__db.count_documents('jobs', {'state': 'completed', 'result': True})
+                failed_jobs = self.__db.count_documents('jobs', {'state': 'completed', 'result': False})
+                output = [
+                    "# HELP scheduler_jobs_total Total number of jobs submitted",
+                    "# TYPE scheduler_jobs_total counter",
+                    f"scheduler_jobs_total {total_jobs}",
+
+                    "# HELP scheduler_jobs_pending Current number of pending jobs waiting to be run",
+                    "# TYPE scheduler_jobs_pending gauge",
+                    f"scheduler_jobs_pending {pending_jobs}",
+
+                    "# HELP scheduler_jobs_running Current number of running jobs",
+                    "# TYPE scheduler_jobs_running gauge",
+                    f"scheduler_jobs_running {running_jobs}",
+
+                    "# HELP scheduler_jobs_successful_total Total number of successful jobs run",
+                    "# TYPE scheduler_jobs_successful_total counter",
+                    f"scheduler_jobs_successful_total {successful_jobs}",
+
+                    "# HELP scheduler_jobs_failed_total Total number of failed jobs run",
+                    "# TYPE scheduler_jobs_failed_total counter",
+                    f"scheduler_jobs_failed_total {failed_jobs}",
+                ]
+                return Response('\n'.join(output), 200, media_type='text/plain')
+            except Exception:
+                self.log.exception('Failed to get metrics')
+                return Response('Failed to get metrics', 500)
+
+        @self._app.post('/run-job')
+        async def receive_run_job_route(request: Request) -> Response:
+            """Submit message route. The main route for receiving messages from a client
+
+            Args:
+                request (Request): request object
+
+            Returns:
+                Response: response based on the message received
+            """
+            raw_msg = await request.body()
+            state = ('failed', 500)
+            try:
+                if isinstance(raw_msg, (bytes, str)):
+                    job = loads(raw_msg)
+                    if isinstance(job, dict):
+                        state = ('success', 200)
+                        job['request_type'] = 'run_job'
+                        self.__msg_queue.put(job)
+                    else:
+                        self.log.error(f'Invalid message type received: {type(job)}')
+                else:
+                    self.log.error(f'Invalid message type received: {type(raw_msg)}')
+            except Exception:
+                self.log.exception('Failed to handle run job request')
+                state = ('failed', 500)
+            del raw_msg
+            return Response(*state)
+
+        @self._app.post('/job-update')
+        async def receive_job_update_route(request: Request) -> Response:
+            """Submit message route. The main route for receiving messages from a client
+
+            Args:
+                request (Request): request object
+
+            Returns:
+                Response: response based on the message received
+            """
+            raw_msg = await request.body()
+            state = ('failed', 500)
+            try:
+                if isinstance(raw_msg, (bytes, str)):
+                    job = loads(raw_msg)
+                    if isinstance(job, dict):
+                        state = ('success', 200)
+                        job['request_type'] = 'job_update'
+                        self.__msg_queue.put(job)
+                    else:
+                        self.log.error(f'Invalid message type received: {type(job)}')
+                else:
+                    self.log.error(f'Invalid message type received: {type(raw_msg)}')
+            except Exception:
+                self.log.exception('Failed to handle run job request')
+                state = ('failed', 500)
+            del raw_msg
+            return Response(*state)
+
+    @property
+    def __certs(self):
+        return {
+            'ssl_ca_certs': '/app/ca.crt',
+            'ssl_certfile': '/app/host.crt',
+            'ssl_keyfile': '/app/host.key',
+            'ssl_cert_reqs': ssl.CERT_REQUIRED
+        }
+
+    def __start_web_server(self) -> bool:
+        """The web server process. Stays running and is handled by the parent process
+
+        Returns:
+            bool: True on successful start and stop. False otherwise
+        """
+        try:
+            uvicorn.run(self._app, host='0.0.0.0', port=6000, proxy_headers=True, **self.__certs)
+            return True
+        except Exception:
+            self.log.exception('Exception occurred in web server')
+        return False
+
+    def start(self) -> bool:
+        """Start the web server cleaner thread and start the web server
+
+        Returns:
+            bool: True if the server started successfully, False otherwise
+        """
+        self.log.info('Starting scheduler web server')
+        if self.__process and self.__process.is_alive():
+            self.log.info('Server is already running')
+            return True
+        try:
+            self.__process = Process(target=self.__start_web_server, daemon=True)
+            self.__process.start()
+            sleep(1)  # Give the server time to start
+            return True
+        except Exception:
+            self.log.exception('Failed to start web server process')
+        return False
+
+    def stop(self) -> bool:
+        """Stop the web server and the web server cleaner thread
+
+        Returns:
+            bool: True if the server stopped successfully, False otherwise
+        """
+        self.log.info('Stopping scheduler web server')
+        if self.__process and self.__process.is_alive():
+            try:
+                self.__process.terminate()
+                return True
+            except Exception:
+                self.log.exception('Failed to stop web server process')
+                return False
+        self.log.info('Web server process is not running')
+        return True
 
 
 class JobPublisher():
@@ -724,7 +694,6 @@ class JobScheduler():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
-        self.__db = Mongo(self.log)
         self.__run_job_queue = Queue()
         self.__web_server = WebServer(self.__run_job_queue, self.log)
         self._crons = schedule
@@ -736,7 +705,8 @@ class JobScheduler():
         return self
 
     def __exit__(self, *_):
-        return self.__pool.shutdown(wait=False)
+        self.__pool.shutdown(wait=False)
+        self.__web_server.stop()
 
     def __init_worker(self):
         thread_local.db = Mongo(self.log)
@@ -768,7 +738,7 @@ class JobScheduler():
         return None
 
     def __get_crons(self):
-        return self.__db.get_all('crons', {'disabled': False})
+        return Mongo(self.log).get_all('crons', {'disabled': False})
 
     def get_scheduled_run_now_jobs(self):
         jobs = []
@@ -793,8 +763,6 @@ class JobScheduler():
         return True
 
     def __publish_job(self, cron: Dict, job_id: str = None):
-        db = thread_local.db
-        publisher = thread_local.publisher
         try:
             job = {
                 '_id': job_id or str(uuid4()),
@@ -805,18 +773,18 @@ class JobScheduler():
                 'hostInventory': cron.get('hostInventory', {}),
                 'extraVars': cron.get('extraVars', {}),
                 'state': 'pending',
-                'scheduled': datetime.now().isoformat(),
+                'scheduled': datetime.now(),
                 'start': None,
                 'end': None,
                 'result': None,
                 'errors': [],
             }
-            publisher.send_msg(dumps(job).encode(), job.get('_id'))
+            thread_local.publisher.send_msg(dumps(job).encode(), job.get('_id'))
             job['expiryTime'] = datetime.now() + timedelta(days=7)
         except Exception:
             self.log.exception('Failed to send job to broker')
             return False
-        return bool(db.insert_one('jobs', job))
+        return bool(thread_local.db.insert_one('jobs', job))
 
     def _run_cron(self, cron: Dict, job_id: str = None):
         self.__pool.submit(self.__publish_job, cron, job_id)

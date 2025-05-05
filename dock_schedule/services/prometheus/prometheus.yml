@@ -156,3 +156,33 @@ scrape_configs:
       - source_labels: [instance]
         replacement: proxy
         target_label: instance
+
+  - job_name: Job-Scrape
+    scheme: https
+    params:
+      host: [scheduler]
+    tls_config:
+      ca_file: /etc/prometheus/ca.crt
+      cert_file: /etc/prometheus/host.crt
+      key_file: /etc/prometheus/host.key
+      insecure_skip_verify: false
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        port: 6000
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_container_label_prometheus_job]
+        regex: job-stats
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: dock-schedule-proxy
+        action: keep
+      - source_labels: [__address__]
+        replacement: proxy:6001
+        target_label: __address__
+      - source_labels: [instance]
+        replacement: scheduler
+        target_label: instance

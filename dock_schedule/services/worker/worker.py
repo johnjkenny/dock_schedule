@@ -19,7 +19,7 @@ from pika.channel import Channel
 from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, OperationFailure
+from pymongo.errors import ConnectionFailure, OperationFailure, ServerSelectionTimeoutError
 
 
 thread_local = local()
@@ -53,17 +53,26 @@ class Mongo():
     def client(self):
         if self.__client is None:
             if self.__load_creds():
-                try:
-                    self.__client = MongoClient(
-                        host=self.__host,
-                        tls=True,
-                        tlsCAFile='/app/ca.crt',
-                        tlsCertificateKeyFile='/app/host.pem',
-                    )
-                except ConnectionFailure:
-                    self.log.exception('Failed to connect to MongoDB')
-                except Exception:
-                    self.log.exception('Failed to create MongoDB client')
+                for attempt in range(36):
+                    try:
+                        self.__client = MongoClient(
+                            host=self.__host,
+                            tls=True,
+                            tlsCAFile='/app/ca.crt',
+                            tlsCertificateKeyFile='/app/host.pem',
+                            serverSelectionTimeoutMS=2000
+                        )
+                        self.__client.admin.command('ping')
+                        self.log.info('MongoDB client created successfully')
+                        return self.__client
+                    except ServerSelectionTimeoutError:
+                        self.log.error(f'Failed to connect to MongoDB {attempt + 1}/36')
+                    except ConnectionFailure:
+                        self.log.exception('Failed to connect to MongoDB')
+                    except Exception:
+                        self.log.exception('Failed to create MongoDB client')
+                        return None
+                    sleep(2)
         return self.__client
 
     def __load_creds(self):
@@ -402,12 +411,17 @@ class Worker():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
+        self.__threads = []
         self.__create_worker_threads()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_):
+        self.stop_trigger.set()
+        for thread in self.__threads:
+            if thread.is_alive():
+                thread.join(1)
         return
 
     def __init_worker(self):
@@ -424,6 +438,7 @@ class Worker():
         for _ in range(3):
             thread = Thread(target=self.__init_worker, daemon=True)
             thread.start()
+            self.__threads.append(thread)
 
     def __convert_job_request(self, job_request: bytes):
         try:
@@ -537,6 +552,8 @@ class Worker():
     def run_job(self, job: Dict) -> bool:
         self.log.info(f'Running job: {job.get("name")} {job.get("_id")[:8]}')
         job['start'] = datetime.now()
+        job['state'] = 'running'
+        thread_local.db.update_one({'_id': job.get('_id')}, {'$set': job})
         inventory = self.__parse_host_inventory(job.get('hostInventory'))
         playbook = self.__parse_playbook(job)
         if inventory and playbook:
