@@ -4,11 +4,12 @@ import ssl
 import json
 import logging
 from time import sleep, gmtime
-from threading import Thread, Event
+from threading import Thread, Event, local
 from typing import Dict
 from tempfile import TemporaryDirectory
 from urllib.parse import quote_plus
 from datetime import datetime
+from queue import Queue
 
 import ansible_runner
 from pika import SelectConnection, BaseConnection
@@ -19,6 +20,9 @@ from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
+
+
+thread_local = local()
 
 
 def get_logger():
@@ -102,9 +106,9 @@ class Mongo():
 
 
 class JobConsumer():
-    def __init__(self, callback: callable, logger: logging.Logger = None):
-        self.callback = callback
+    def __init__(self, queue: Queue, logger: logging.Logger = None):
         self.log = logger or get_logger()
+        self.__queue = queue
         self.__route = 'job-queue'
         self.__exchange = 'dock-schedule'
         self.__thread: Thread | None = None
@@ -260,10 +264,13 @@ class JobConsumer():
             return False
         return self.__start_consuming_queue()
 
+    def __add_job_to_queue(self, ch: Channel, method: Basic.Deliver, _, body: bytes):
+        self.__queue.put((ch, method, body))
+
     def __start_consuming_queue(self):
         try:
             self.log.info('Starting to consume messages from queue')
-            self.__channel.basic_consume(self.__route, self.callback, False)
+            self.__channel.basic_consume(self.__route, self.__add_job_to_queue, False)
             return True
         except Exception:
             self.log.exception('Exception occurred while consuming message queue')
@@ -395,16 +402,28 @@ class Worker():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
-        self.__consumer = JobConsumer(self.__job_request_handler, self.log)
-        self.__db = Mongo(self.log)
-        if not self.__consumer.start():
-            raise Exception('Failed to start job consumer')
+        self.__create_worker_threads()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_):
-        self.__consumer.stop()
+        return
+
+    def __init_worker(self):
+        queue = Queue(3)
+        thread_local.db = Mongo(self.log)
+        thread_local.consumer = JobConsumer(queue, self.log)
+        if not thread_local.consumer.start():
+            raise Exception('Failed to start job consumer')
+        while not self.stop_trigger.is_set():
+            self.__job_request_handler(*queue.get())
+        thread_local.consumer.stop()
+
+    def __create_worker_threads(self):
+        for _ in range(3):
+            thread = Thread(target=self.__init_worker, daemon=True)
+            thread.start()
 
     def __convert_job_request(self, job_request: bytes):
         try:
@@ -416,7 +435,7 @@ class Worker():
             self.log.exception('Failed to convert job request')
         return None
 
-    def __job_request_handler(self, ch: Channel, method: Basic.Deliver, _, body: bytes):
+    def __job_request_handler(self, ch: Channel, method: Basic.Deliver, body: bytes):
         job = self.__convert_job_request(body)
         if job:
             self.run_job(job)
@@ -512,7 +531,7 @@ class Worker():
         else:
             job['result'] = False
             self.log.error(f"Job failed: {job.get('name')} {job.get('_id')[:8]}")
-        self.__db.update_one({'_id': job.get('_id')}, {'$set': job})
+        thread_local.db.update_one({'_id': job.get('_id')}, {'$set': job})
         return job['result']
 
     def run_job(self, job: Dict) -> bool:

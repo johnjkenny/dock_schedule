@@ -3,7 +3,7 @@
 import ssl
 import logging
 from time import sleep, gmtime
-from threading import Thread, Event
+from threading import Thread, Event, local
 from multiprocessing import Process, Queue
 from queue import Empty
 from uuid import uuid4
@@ -11,6 +11,7 @@ from json import dumps, loads
 from typing import Dict
 from urllib.parse import quote_plus
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 
 import schedule
 import uvicorn
@@ -23,6 +24,9 @@ from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
+
+
+thread_local = local()
 
 
 def get_logger():
@@ -720,13 +724,11 @@ class JobScheduler():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
-        self.__publisher = JobPublisher(self.log)
         self.__db = Mongo(self.log)
         self.__run_job_queue = Queue()
         self.__web_server = WebServer(self.__run_job_queue, self.log)
         self._crons = schedule
-        if not self.__publisher.start():
-            raise Exception('Failed to start job publisher')
+        self.__pool = ThreadPoolExecutor(3, initializer=self.__init_worker)
         if not self.__web_server.start():
             raise Exception('Failed to start web server')
 
@@ -734,7 +736,13 @@ class JobScheduler():
         return self
 
     def __exit__(self, *_):
-        self.__publisher.stop()
+        return self.__pool.shutdown(wait=False)
+
+    def __init_worker(self):
+        thread_local.db = Mongo(self.log)
+        thread_local.publisher = JobPublisher(self.log)
+        if not thread_local.publisher.start():
+            raise Exception('Failed to start job publisher')
 
     def __create_cron_job(self, cron: Dict):
         freq = cron.get('frequency')
@@ -784,7 +792,9 @@ class JobScheduler():
             self.log.info('Updated cron schedule')
         return True
 
-    def _run_cron(self, cron: Dict, job_id: str = None):
+    def __publish_job(self, cron: Dict, job_id: str = None):
+        db = thread_local.db
+        publisher = thread_local.publisher
         try:
             job = {
                 '_id': job_id or str(uuid4()),
@@ -801,12 +811,15 @@ class JobScheduler():
                 'result': None,
                 'errors': [],
             }
-            self.__publisher.send_msg(dumps(job).encode(), job.get('_id'))
+            publisher.send_msg(dumps(job).encode(), job.get('_id'))
             job['expiryTime'] = datetime.now() + timedelta(days=7)
         except Exception:
             self.log.exception('Failed to send job to broker')
             return False
-        return bool(self.__db.insert_one('jobs', job))
+        return bool(db.insert_one('jobs', job))
+
+    def _run_cron(self, cron: Dict, job_id: str = None):
+        self.__pool.submit(self.__publish_job, cron, job_id)
 
     def set_cron_schedule(self):
         self._crons.clear()
