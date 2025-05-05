@@ -4,10 +4,11 @@ from tempfile import TemporaryDirectory
 from logging import Logger
 from typing import Dict
 from urllib.parse import quote_plus
+from time import sleep
 
 import ansible_runner
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, OperationFailure
+from pymongo.errors import ConnectionFailure, OperationFailure, ServerSelectionTimeoutError
 
 from dock_schedule.logger import get_logger
 from dock_schedule.color import Color
@@ -28,17 +29,26 @@ class Mongo():
     def client(self):
         if self.__client is None:
             if self.__load_creds():
-                try:
-                    self.__client = MongoClient(
-                        host=self.__host,
-                        tls=True,
-                        tlsCAFile='/etc/docker/ca.crt',
-                        tlsCertificateKeyFile='/etc/docker/host.pem',
-                    )
-                except ConnectionFailure:
-                    self.log.exception('Failed to connect to MongoDB')
-                except Exception:
-                    self.log.exception('Failed to create MongoDB client')
+                for attempt in range(36):
+                    try:
+                        self.__client = MongoClient(
+                            host=self.__host,
+                            tls=True,
+                            tlsCAFile='/etc/docker/ca.crt',
+                            tlsCertificateKeyFile='/etc/docker/host.pem',
+                            serverSelectionTimeoutMS=2000
+                        )
+                        self.__client.admin.command('ping')
+                        self.log.info('MongoDB client created successfully')
+                        return self.__client
+                    except ServerSelectionTimeoutError:
+                        self.log.error(f'Failed to connect to MongoDB {attempt + 1}/36')
+                    except ConnectionFailure:
+                        self.log.exception('Failed to connect to MongoDB')
+                    except Exception:
+                        self.log.exception('Failed to create MongoDB client')
+                        return None
+                    sleep(2)
         return self.__client
 
     def __load_creds(self):

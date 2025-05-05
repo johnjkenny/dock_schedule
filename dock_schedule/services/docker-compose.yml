@@ -145,6 +145,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /opt/dock-schedule/prometheus/data:/prometheus
+      - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - dock-schedule-proxy
     secrets:
@@ -281,6 +282,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    labels:
+      - prometheus-job=job-stats
 
   worker:
     image: registry:5000/dschedule_worker:1.0.0

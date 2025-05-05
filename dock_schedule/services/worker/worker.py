@@ -4,11 +4,12 @@ import ssl
 import json
 import logging
 from time import sleep, gmtime
-from threading import Thread, Event
+from threading import Thread, Event, local
 from typing import Dict
 from tempfile import TemporaryDirectory
 from urllib.parse import quote_plus
 from datetime import datetime
+from queue import Queue
 
 import ansible_runner
 from pika import SelectConnection, BaseConnection
@@ -18,7 +19,10 @@ from pika.channel import Channel
 from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, OperationFailure
+from pymongo.errors import ConnectionFailure, OperationFailure, ServerSelectionTimeoutError
+
+
+thread_local = local()
 
 
 def get_logger():
@@ -49,17 +53,26 @@ class Mongo():
     def client(self):
         if self.__client is None:
             if self.__load_creds():
-                try:
-                    self.__client = MongoClient(
-                        host=self.__host,
-                        tls=True,
-                        tlsCAFile='/app/ca.crt',
-                        tlsCertificateKeyFile='/app/host.pem',
-                    )
-                except ConnectionFailure:
-                    self.log.exception('Failed to connect to MongoDB')
-                except Exception:
-                    self.log.exception('Failed to create MongoDB client')
+                for attempt in range(36):
+                    try:
+                        self.__client = MongoClient(
+                            host=self.__host,
+                            tls=True,
+                            tlsCAFile='/app/ca.crt',
+                            tlsCertificateKeyFile='/app/host.pem',
+                            serverSelectionTimeoutMS=2000
+                        )
+                        self.__client.admin.command('ping')
+                        self.log.info('MongoDB client created successfully')
+                        return self.__client
+                    except ServerSelectionTimeoutError:
+                        self.log.error(f'Failed to connect to MongoDB {attempt + 1}/36')
+                    except ConnectionFailure:
+                        self.log.exception('Failed to connect to MongoDB')
+                    except Exception:
+                        self.log.exception('Failed to create MongoDB client')
+                        return None
+                    sleep(2)
         return self.__client
 
     def __load_creds(self):
@@ -102,9 +115,9 @@ class Mongo():
 
 
 class JobConsumer():
-    def __init__(self, callback: callable, logger: logging.Logger = None):
-        self.callback = callback
+    def __init__(self, queue: Queue, logger: logging.Logger = None):
         self.log = logger or get_logger()
+        self.__queue = queue
         self.__route = 'job-queue'
         self.__exchange = 'dock-schedule'
         self.__thread: Thread | None = None
@@ -260,10 +273,13 @@ class JobConsumer():
             return False
         return self.__start_consuming_queue()
 
+    def __add_job_to_queue(self, ch: Channel, method: Basic.Deliver, _, body: bytes):
+        self.__queue.put((ch, method, body))
+
     def __start_consuming_queue(self):
         try:
             self.log.info('Starting to consume messages from queue')
-            self.__channel.basic_consume(self.__route, self.callback, False)
+            self.__channel.basic_consume(self.__route, self.__add_job_to_queue, False)
             return True
         except Exception:
             self.log.exception('Exception occurred while consuming message queue')
@@ -395,16 +411,34 @@ class Worker():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
-        self.__consumer = JobConsumer(self.__job_request_handler, self.log)
-        self.__db = Mongo(self.log)
-        if not self.__consumer.start():
-            raise Exception('Failed to start job consumer')
+        self.__threads = []
+        self.__create_worker_threads()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_):
-        self.__consumer.stop()
+        self.stop_trigger.set()
+        for thread in self.__threads:
+            if thread.is_alive():
+                thread.join(1)
+        return
+
+    def __init_worker(self):
+        queue = Queue(3)
+        thread_local.db = Mongo(self.log)
+        thread_local.consumer = JobConsumer(queue, self.log)
+        if not thread_local.consumer.start():
+            raise Exception('Failed to start job consumer')
+        while not self.stop_trigger.is_set():
+            self.__job_request_handler(*queue.get())
+        thread_local.consumer.stop()
+
+    def __create_worker_threads(self):
+        for _ in range(3):
+            thread = Thread(target=self.__init_worker, daemon=True)
+            thread.start()
+            self.__threads.append(thread)
 
     def __convert_job_request(self, job_request: bytes):
         try:
@@ -416,7 +450,7 @@ class Worker():
             self.log.exception('Failed to convert job request')
         return None
 
-    def __job_request_handler(self, ch: Channel, method: Basic.Deliver, _, body: bytes):
+    def __job_request_handler(self, ch: Channel, method: Basic.Deliver, body: bytes):
         job = self.__convert_job_request(body)
         if job:
             self.run_job(job)
@@ -512,12 +546,14 @@ class Worker():
         else:
             job['result'] = False
             self.log.error(f"Job failed: {job.get('name')} {job.get('_id')[:8]}")
-        self.__db.update_one({'_id': job.get('_id')}, {'$set': job})
+        thread_local.db.update_one({'_id': job.get('_id')}, {'$set': job})
         return job['result']
 
     def run_job(self, job: Dict) -> bool:
         self.log.info(f'Running job: {job.get("name")} {job.get("_id")[:8]}')
         job['start'] = datetime.now()
+        job['state'] = 'running'
+        thread_local.db.update_one({'_id': job.get('_id')}, {'$set': job})
         inventory = self.__parse_host_inventory(job.get('hostInventory'))
         playbook = self.__parse_playbook(job)
         if inventory and playbook:
