@@ -42,6 +42,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "green", "value": 0},
               {"color": "yellow", "value": 1},
               {"color": "orange", "value": 10},
@@ -116,6 +117,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "blue", "value": 0}
             ]
           },
@@ -186,6 +188,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "green", "value": 0}
             ]
           },
@@ -255,6 +258,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "green", "value": 0},
               {"color": "red", "value": 1}
             ]
@@ -323,6 +327,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "RGB(255, 0, 255)", "value": 0}
             ]
           },
@@ -390,6 +395,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "RGB(0, 255, 255)", "value": 0}
             ]
           },
@@ -438,75 +444,6 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Total amount of job crons created",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "red", "value": 0},
-              {"color": "RGB(0, 255, 255)", "value": 1}
-            ]
-          },
-          "unit": "locale"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 18,
-        "y": 1
-      },
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "exemplar": false,
-          "expr": "scheduler_crons_total{instance=\"$instance\", job=\"$job\"}",
-          "instant": true,
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Total Crons",
-      "type": "stat"
-    },
-
-
-
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
       "description": "Total amount of job crons enabled",
       "fieldConfig": {
         "defaults": {
@@ -527,6 +464,7 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
+              {"color": "red", "value": "N/A"},
               {"color": "red", "value": 0},
               {"color": "RGB(0, 255, 255)", "value": 1}
             ]
@@ -537,8 +475,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
-        "x": 21,
+        "w": 2,
+        "x": 18,
         "y": 1
       },
       "maxDataPoints": 100,
@@ -566,6 +504,146 @@
         }
       ],
       "title": "Enabled Crons",
+      "type": "stat"
+    },
+
+
+
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Total amount of schedulers in the cluster. Should only be one, but shows if the service is down if zero are present.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "0"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": "0"},
+              {"color": "red", "value": 0},
+              {"color": "green", "value": 1},
+              {"color": "orange", "value": 2}
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 20,
+        "y": 1
+      },
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "count(container_start_time_seconds{container_label_com_docker_compose_service=\"scheduler\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Schedulers",
+      "type": "stat"
+    },
+
+
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Total amount of workers in the cluster. Each worker can run three jobs in parallel and can queue a max of 9 jobs (three per thread)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "0"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": "0"},
+              {"color": "red", "value": 0},
+              {"color": "green", "value": 1}
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 22,
+        "y": 1
+      },
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "count(container_start_time_seconds{container_label_com_docker_compose_service=\"worker\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Workers",
       "type": "stat"
     },
 
