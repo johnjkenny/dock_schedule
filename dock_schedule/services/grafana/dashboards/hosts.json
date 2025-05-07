@@ -1491,10 +1491,6 @@
           "title": "CPU Busy",
           "type": "timeseries"
         },
-    
-    
-    
-    
         {
           "title": "CPU Usage",
           "type": "stat",
@@ -1551,7 +1547,6 @@
             "overrides": []
           }
         },
-    
         {
           "datasource": {
             "type": "prometheus",
@@ -3571,7 +3566,6 @@
         }
       ]
     }
-
   ],
   "refresh": "15s",
   "style": "dark",
@@ -3657,5 +3651,5 @@
       "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
     },
     "timezone": "browser",
-    "title": "Swarm Nodes"
+    "title": "Hosts"
 }

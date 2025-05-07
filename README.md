@@ -1465,7 +1465,7 @@ options:
 
 ```bash
 # Create python test job that run every hour with arg '0' (success):
-dschedule -j -c -n Python-Test01 -t python3 -r test.py -a 0 -f hour -i 1 
+dschedule -j -c -n Python-Test01 -t python3 -r test.py -a 0 -f hour -i 1
 [2025-04-26 16:06:17,987][INFO][utils,343]: Job Python-Test01 created successfully
 
 # Create bash test job that runs every hour at the 30 min mark with arg '0' (success):

@@ -163,7 +163,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "description": "The rate of jobs that are unroutable and have been returned to sender to retry. This usually happens when the scheduler job queue has become too full.",
+        "description": "The rate of jobs that are un-routable and have been returned to sender to retry. This usually happens when the scheduler job queue has become too full.",
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
@@ -1079,7 +1079,6 @@
       }
     ],
     "refresh": "15s",
-    "schemaVersion": 39,
     "tags": [
       "jobs",
       "broker",
@@ -1144,5 +1143,5 @@
       "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
     },
     "timezone": "browser",
-    "title": "Job Broker"
+    "title": "Broker"
   }

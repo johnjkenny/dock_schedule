@@ -110,6 +110,7 @@
         "tlsverify",
         "tmpfs",
         "unacked",
+        "unroutable",
         "userdel",
         "usermod",
         "uvicorn",
