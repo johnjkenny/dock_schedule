@@ -850,11 +850,6 @@ class JobScheduler():
         return None
 
     def reschedule_jobs_check(self):
-        '''
-        # ToDo: need to create a cli command that reschedules all pending jobs that way it can be cleaned up.
-
-        # ToDo: need to create a cli command that allows you to cancel pending jobs or all pending jobs
-        '''
         pending = self.__db.get_all('jobs', {'state': 'pending'})
         if pending:
             latest = self.__get_latest_completed_job()

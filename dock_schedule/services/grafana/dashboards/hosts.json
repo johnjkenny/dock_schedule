@@ -1167,18 +1167,21 @@
       "title": "Swarm Share Total",
       "type": "stat"
     },
+
+
+
     {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Clock drift adjustment in parts per million (PPM)",
+      "description": "Total number of containers running on the host. If 2 are running then it is mostly likely the scraping containers and the host is not being utilized for cluster jobs. If less than 2 are running then there is most likely a problem occurring with the container services, the host services or the host itself.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 2,
+          "decimals": 0,
           "mappings": [
             {
               "options": {
@@ -1193,22 +1196,10 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 5
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 15
-              }
+              {"color": "red", "value": "N/A"},
+              {"color": "red", "value": 0},
+              {"color": "orange", "value": 2},
+              {"color": "green", "value": 3}
             ]
           },
           "unit": "short"
@@ -1238,17 +1229,20 @@
       },
       "targets": [
         {
-          "exemplar": false,
-          "expr": "(node_timex_frequency_adjustment_ratio{instance=\"$node\", job=\"$job\"} - 1) * 1000000",
+          "expr": "count(container_start_time_seconds{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"})",
           "instant": true,
           "legendFormat": "__auto",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "NTP Drift (PPM)",
+      "title": "Containers",
       "type": "stat"
     },
+
+
+
+
     {
       "title": "CPU",
       "type": "row",
@@ -2129,7 +2123,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Write Operations",
+                "axisLabel": "Operations",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -2219,7 +2213,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Read Operations",
+                "axisLabel": "Operations",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -2309,7 +2303,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Written Data",
+                "axisLabel": "Data",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -2389,7 +2383,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Read Data",
+                "axisLabel": "Data",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -3076,7 +3070,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Transmitted Packets for found interfaces",
+                "axisLabel": "Packets",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -3159,7 +3153,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Received Packets for found interfaces",
+                "axisLabel": "Packets",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -3243,7 +3237,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Processed Packets",
+                "axisLabel": "Packets",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -3327,7 +3321,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Dropped Packets",
+                "axisLabel": "Packets",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
