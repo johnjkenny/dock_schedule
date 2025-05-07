@@ -7,7 +7,7 @@ from threading import Thread, Event, local
 from multiprocessing import Process, Queue
 from queue import Empty
 from uuid import uuid4
-from json import dumps, loads
+from json import dumps, loads, JSONEncoder
 from typing import Dict
 from urllib.parse import quote_plus
 from datetime import datetime, timedelta
@@ -22,7 +22,7 @@ from pika.credentials import PlainCredentials
 from pika.channel import Channel
 from pika.connection import ConnectionParameters, SSLOptions
 from pika.spec import Basic
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from pymongo.errors import ConnectionFailure, OperationFailure, ServerSelectionTimeoutError
 
 
@@ -42,9 +42,17 @@ def get_logger():
     return log
 
 
+class DateTimeEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 class Mongo():
-    def __init__(self, logger: logging.Logger = None):
+    def __init__(self, client_id: str = None, logger: logging.Logger = None):
         self.log = logger
+        self.__id = client_id or str(uuid4())[:8]
         self.__client: MongoClient | None = None
         self.__creds = {'user': '', 'passwd': '', 'db': ''}
 
@@ -67,14 +75,14 @@ class Mongo():
                             serverSelectionTimeoutMS=2000
                         )
                         self.__client.admin.command('ping')
-                        self.log.info('MongoDB client created successfully')
+                        self.log.info(f'[{self.__id}] MongoDB client created successfully')
                         return self.__client
                     except ServerSelectionTimeoutError:
-                        self.log.error(f'Failed to connect to MongoDB {attempt + 1}/36')
+                        self.log.error(f'[{self.__id}] Failed to connect to MongoDB {attempt + 1}/35')
                     except ConnectionFailure:
-                        self.log.exception('Failed to connect to MongoDB')
+                        self.log.exception(f'[{self.__id}] Failed to connect to MongoDB')
                     except Exception:
-                        self.log.exception('Failed to create MongoDB client')
+                        self.log.exception(f'[{self.__id}] Failed to create MongoDB client')
                         return None
                     sleep(2)
         return self.__client
@@ -85,7 +93,7 @@ class Mongo():
                 with open(f'/run/secrets/mongo_{key}', 'r') as f:
                     self.__creds[key] = f.read().strip()
             except Exception:
-                self.log.exception(f'Failed to load mongodb credentials for {key}')
+                self.log.exception(f'[{self.__id}] Failed to load mongodb credentials for {key}')
                 return False
         return True
 
@@ -94,7 +102,7 @@ class Mongo():
             try:
                 return self.client[self.__creds.get('db')]
             except Exception:
-                self.log.exception('Failed to get database object')
+                self.log.exception(f'[{self.__id}] Failed to get database object')
         return None
 
     def __get_collection(self, collection_name: str = 'jobs'):
@@ -103,7 +111,7 @@ class Mongo():
             try:
                 return db[collection_name]
             except Exception:
-                self.log.exception(f'Failed to get collection: {collection_name}')
+                self.log.exception(f'[{self.__id}] Failed to get collection: {collection_name}')
         return None
 
     def insert_one(self, collection_name: str, document: dict):
@@ -112,9 +120,9 @@ class Mongo():
             try:
                 return collection.insert_one(document)
             except OperationFailure as error:
-                self.log.error(f'Failed to insert document: {error.details}')
+                self.log.error(f'[{self.__id}] failed to insert document: {error.details}')
             except Exception:
-                self.log.exception(f'Failed to insert document: {document}')
+                self.log.exception(f'[{self.__id}] Failed to insert document: {document}')
         return None
 
     def insert_many(self, collection_name: str, documents: list[dict]):
@@ -123,9 +131,9 @@ class Mongo():
             try:
                 return collection.insert_many(documents)
             except OperationFailure as error:
-                self.log.error(f'Failed to insert documents: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to insert documents: {error.details}')
             except Exception:
-                self.log.exception(f'Failed to insert documents: {documents}')
+                self.log.exception(f'[{self.__id}] Failed to insert documents: {documents}')
         return None
 
     def get_one(self, collection_name: str, *filters: dict):
@@ -134,9 +142,9 @@ class Mongo():
             try:
                 return collection.find_one(*filters)
             except OperationFailure as error:
-                self.log.error(f'Failed to find data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to find data: {error.details}')
             except Exception:
-                self.log.exception('Failed to find data')
+                self.log.exception(f'[{self.__id}] Failed to find data')
         return None
 
     def get_all(self, collection_name: str, *filters: dict):
@@ -145,9 +153,9 @@ class Mongo():
             try:
                 return list(collection.find(*filters))
             except OperationFailure as error:
-                self.log.error(f'Failed to find data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to find data: {error.details}')
             except Exception:
-                self.log.exception('Failed to query collection')
+                self.log.exception(f'[{self.__id}] Failed to query collection')
         return []
 
     def get_all_with_cursor(self, collection_name: str, *filters: dict):
@@ -156,9 +164,9 @@ class Mongo():
             try:
                 return collection.find(*filters)
             except OperationFailure as error:
-                self.log.error(f'Failed to find data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to find data: {error.details}')
             except Exception:
-                self.log.exception('Failed to query collection')
+                self.log.exception(f'[{self.__id}] Failed to query collection')
         return None
 
     def update_one(self, collection_name: str, query: dict, update: dict, upsert: bool = False):
@@ -167,9 +175,9 @@ class Mongo():
             try:
                 return collection.update_one(query, update, upsert=upsert)
             except OperationFailure as error:
-                self.log.error(f'Failed to update data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to update data: {error.details}')
             except Exception:
-                self.log.exception(f'Failed to update document: {query}')
+                self.log.exception(f'[{self.__id}] Failed to update document: {query}')
         return None
 
     def update_many(self, collection_name: str, query: dict, update: dict, upsert: bool = False):
@@ -178,9 +186,9 @@ class Mongo():
             try:
                 return collection.update_many(query, update, upsert=upsert)
             except OperationFailure as error:
-                self.log.error(f'Failed to update data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to update data: {error.details}')
             except Exception:
-                self.log.exception(f'Failed to update documents: {query}')
+                self.log.exception(f'[{self.__id}] Failed to update documents: {query}')
         return None
 
     def delete_one(self, collection_name: str, query: dict) -> bool:
@@ -190,9 +198,9 @@ class Mongo():
                 collection.delete_one(query)
                 return True
             except OperationFailure as error:
-                self.log.error(f'Failed to delete data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to delete data: {error.details}')
             except Exception:
-                self.log.exception(f'Failed to delete document: {query}')
+                self.log.exception(f'[{self.__id}] Failed to delete document: {query}')
         return False
 
     def delete_many(self, collection_name: str, query: dict) -> bool:
@@ -202,9 +210,9 @@ class Mongo():
                 collection.delete_many(query)
                 return True
             except OperationFailure as error:
-                self.log.error(f'Failed to delete data: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to delete data: {error.details}')
             except Exception:
-                self.log.exception(f'Failed to delete documents: {query}')
+                self.log.exception(f'[{self.__id}] Failed to delete documents: {query}')
         return False
 
     def count_documents(self, collection_name: str, query: Dict) -> int:
@@ -213,9 +221,9 @@ class Mongo():
             try:
                 return collection.count_documents(query, maxTimeMS=2000)
             except OperationFailure as error:
-                self.log.error(f'Failed to count documents: {error.details}')
+                self.log.error(f'[{self.__id}] Failed to count documents: {error.details}')
             except Exception:
-                self.log.exception('Failed to count documents')
+                self.log.exception(f'[{self.__id}] Failed to count documents')
         return 0
 
 
@@ -239,13 +247,15 @@ class WebServer():
         @self._app.get('/metrics')
         def metrics_route() -> Response:
             if self.__db is None:
-                self.__db = Mongo(self.log)
+                self.__db = Mongo('web-server', self.log)
             try:
                 total_jobs = self.__db.count_documents('jobs', {})
                 pending_jobs = self.__db.count_documents('jobs', {'state': 'pending'})
                 running_jobs = self.__db.count_documents('jobs', {'state': 'running'})
                 successful_jobs = self.__db.count_documents('jobs', {'state': 'completed', 'result': True})
                 failed_jobs = self.__db.count_documents('jobs', {'state': 'completed', 'result': False})
+                total_crons = self.__db.count_documents('crons', {})
+                total_crons_enabled = self.__db.count_documents('crons', {'disabled': False})
                 output = [
                     "# HELP scheduler_jobs_total Total number of jobs submitted",
                     "# TYPE scheduler_jobs_total counter",
@@ -266,6 +276,14 @@ class WebServer():
                     "# HELP scheduler_jobs_failed_total Total number of failed jobs run",
                     "# TYPE scheduler_jobs_failed_total counter",
                     f"scheduler_jobs_failed_total {failed_jobs}",
+
+                    "# HELP scheduler_crons_total Total number of crons",
+                    "# TYPE scheduler_crons_total counter",
+                    f"scheduler_crons_total {total_crons}",
+
+                    "# HELP scheduler_crons_enabled_total Total number of enabled crons",
+                    "# TYPE scheduler_crons_enabled_total counter",
+                    f"scheduler_crons_enabled_total {total_crons_enabled}",
                 ]
                 return Response('\n'.join(output), 200, media_type='text/plain')
             except Exception:
@@ -390,8 +408,9 @@ class WebServer():
 
 
 class JobPublisher():
-    def __init__(self, logger: logging.Logger = None):
+    def __init__(self, pub_id: str, logger: logging.Logger = None):
         self.log = logger or get_logger()
+        self.__id = pub_id
         self.__route = 'job-queue'
         self.__exchange = 'dock-schedule'
         self.__thread: Thread | None = None
@@ -411,9 +430,9 @@ class JobPublisher():
                 if self.__channel.is_open:
                     return True
                 return self.__wait_for_channel_open()
-            self.log.error('Broker connection channel is closed')
+            self.log.error(f'[{self.__id}] Broker connection channel is closed')
         else:
-            self.log.error('Broker connection is closed')
+            self.log.error(f'[{self.__id}] Broker connection is closed')
         return False
 
     def __wait_for_channel_open(self):
@@ -422,21 +441,21 @@ class JobPublisher():
             while not self.__channel.is_open:
                 cnt += 1
                 if cnt > 100:
-                    self.log.error('Failed to open channel')
+                    self.log.error(f'[{self.__id}] Failed to open channel')
                     return False
                 sleep(.2)
-            self.log.debug('Channel is open')
+            self.log.debug(f'[{self.__id}] Channel is open')
             return True
-        self.log.error('Channel does not exist')
+        self.log.error(f'[{self.__id}] Channel does not exist')
         return False
 
     def __wait_for_exchange_declare(self):
         while not self.__exchange_declared:
             if self.__connect_attempt == self.__max_connect_attempts:
-                self.log.error('Failed to declare exchange')
+                self.log.error(f'[{self.__id}] Failed to declare exchange')
                 return False
             sleep(.2)
-        self.log.debug('Exchange declared')
+        self.log.debug(f'[{self.__id}] Exchange declared')
         return True
 
     def __wait_for_conn_unblock(self, timeout: int = 180):
@@ -446,7 +465,7 @@ class JobPublisher():
             sleep(1)
             cnt += 1
             if cnt > timeout:
-                self.log.error('Timeout waiting for connection unblock')
+                self.log.error(f'[{self.__id}] Timeout waiting for connection unblock')
                 return False
         return True
 
@@ -460,7 +479,7 @@ class JobPublisher():
                 with open(f'/run/secrets/broker_{key}', 'r') as f:
                     creds[key] = f.read().strip()
             except Exception:
-                self.log.exception(f'Failed to load broker credentials for {key}')
+                self.log.exception(f'[{self.__id}] Failed to load broker credentials for {key}')
         return creds
 
     def __create_connection_ssl_obj(self):
@@ -472,7 +491,7 @@ class JobPublisher():
             context.check_hostname = True
             return SSLOptions(context, 'broker')
         except Exception:
-            self.log.exception('Failed to create SSL context for broker connection')
+            self.log.exception(f'[{self.__id}] Failed to create SSL context for broker connection')
         return None
 
     def __create_connection_parameters(self):
@@ -491,7 +510,7 @@ class JobPublisher():
                         ssl_options=ssl
                     )
                 except Exception:
-                    self.log.exception('Failed to create connection parameters')
+                    self.log.exception(f'[{self.__id}] Failed to create connection parameters')
         return None
 
     def __reconnect_attempt(self):
@@ -500,41 +519,49 @@ class JobPublisher():
             if self.__connect_attempt != 0:
                 sleep(5)
             self.__connect_attempt += 1
-            self.log.info(f'Reconnecting to broker {self.__connect_attempt}/{self.__max_connect_attempts - 1}')
+            self.log.info(
+                f'[{self.__id}] Reconnecting to broker {self.__connect_attempt}/{self.__max_connect_attempts - 1}')
             return self._restart_io_loop_in_thread()
         return False
 
     def __connect(self, on_connect: callable = None, on_failed: callable = None, on_closed: callable = None):
-        self.log.info('Connecting to message broker')
+        self.log.info(f'[{self.__id}] Connecting to message broker')
         params = self.__create_connection_parameters()
         if params:
             try:
                 return SelectConnection(params, on_connect, on_failed, on_closed)
             except Exception:
-                self.log.exception('Failed to create connection to broker')
+                self.log.exception(f'[{self.__id}] Failed to create connection to broker')
         return None
 
     def __connect_success(self, connection: BaseConnection):
-        self.log.info('Successfully connected to broker')
+        self.log.info(f'[{self.__id}] Successfully connected to broker')
         self.__connect_attempt = 0
         connection.channel(on_open_callback=self.__open_channel)
 
     def __connect_failed(self, *args: tuple):
-        self.log.error(f'Failed to create connection to broker: {args[1]}')
+        self.log.error(f'[{self.__id}] Failed to create connection to broker: {args[1]}')
         return self.__reconnect_attempt()
 
     def __connect_closed(self, *args: tuple):
-        self.log.error(f'Connection closed: {args[1]}')
+        self.log.error(f'[{self.__id}] Connection closed: {args[1]}')
         return self.__reconnect_attempt()
 
     def __open_channel(self, channel: Channel):
-        self.log.info('Successfully opened channel and set exchange')
+        self.log.info(f'[{self.__id}] Successfully opened channel and set exchange')
         self.__channel = channel
         self.__channel.exchange_declare(self.__exchange, 'direct')
         self.__channel.add_on_return_callback(self.__returned_to_sender_handler)
+        self.__channel.confirm_delivery(ack_nack_callback=self.__ack_nack_handler)
         self.__exchange_declared = True
         self.__reconnecting = False
         self.__conn_blocked = False
+
+    def __ack_nack_handler(self, method_frame: Basic.Deliver):
+        if method_frame.method.NAME != 'Basic.Ack':
+            self.log.error(f'[{self.__id}] Message not acknowledged')
+            if not self.__reconnecting:
+                self.__reconnect_attempt()
 
     def __reset_connect_state(self):
         self.__client = None
@@ -545,7 +572,7 @@ class JobPublisher():
     def __returned_to_sender_handler(self, ch: Channel, _: Basic.Deliver, properties: BasicProperties, body: bytes):
         try:
             job_id = loads(body.decode()).get('_id')
-            self.log.error(f'Message returned for job ID {job_id}. Resending to queue...')
+            self.log.error(f'[{self.__id}] Message returned for job ID {job_id}. Resending to queue...')
             sleep(1)
             ch.basic_publish(
                 exchange=self.__exchange,
@@ -555,7 +582,7 @@ class JobPublisher():
                 mandatory=True
             )
         except Exception:
-            self.log.error('Failed to resend message to queue')
+            self.log.error(f'[{self.__id}] Failed to resend message to queue')
 
     def __start_io_loop(self) -> bool:
         self.__client = self.__connect(self.__connect_success, self.__connect_failed, self.__connect_closed)
@@ -566,7 +593,7 @@ class JobPublisher():
                 self.__client.ioloop.start()
                 return True
             except Exception:
-                self.log.exception('Exception occurred in IO loop')
+                self.log.exception(f'[{self.__id}] Exception occurred in IO loop')
         return False
 
     def __stop_io_loop(self):
@@ -581,7 +608,7 @@ class JobPublisher():
             self.__reset_connect_state()
             return True
         except Exception:
-            self.log.exception('Exception occurred while stopping IO-loop')
+            self.log.exception(f'[{self.__id}] Exception occurred while stopping IO-loop')
             return False
 
     def __stop_thread(self):
@@ -590,24 +617,24 @@ class JobPublisher():
                 if self.__thread.is_alive():
                     self.__thread.join(3)
                     if self.__thread.is_alive():
-                        self.log.error('Failed to stop broker thread')
+                        self.log.error(f'[{self.__id}] Failed to stop broker thread')
                         return False
                     self.__thread = None
-                    self.log.info('Successfully stopped broker thread')
+                    self.log.info(f'[{self.__id}] Successfully stopped broker thread')
                 return True
             except Exception:
-                self.log.exception('Exception occurred while stopping broker thread')
-        self.log.debug('Broker thread does not exist to stop')
+                self.log.exception(f'[{self.__id}] Exception occurred while stopping broker thread')
+        self.log.debug(f'[{self.__id}] Broker thread does not exist to stop')
         return True
 
     def _wait_for_reconnect(self, timeout: int = 1800):
         cnt = 0
         while self.__reconnecting:
-            self.log.info('Waiting for reconnection...')
+            self.log.info(f'[{self.__id}] Waiting for reconnection...')
             sleep(1)
             cnt += 1
             if cnt > timeout:
-                self.log.error('Timeout waiting for reconnection')
+                self.log.error(f'[{self.__id}] Timeout waiting for reconnection')
                 return False
         return True
 
@@ -621,7 +648,7 @@ class JobPublisher():
         """
         if self.__stop_io_loop():
             return self.__start_io_loop()
-        self.log.error('Failed to restart broker connection')
+        self.log.error(f'[{self.__id}] Failed to restart broker connection')
         return False
 
     def __configure_queue(self):
@@ -629,17 +656,17 @@ class JobPublisher():
             try:
                 self.__channel.queue_declare(self.__route, durable=True)
                 self.__queue_declared = True
-                self.log.info('Successfully declared queue')
+                self.log.info(f'[{self.__id}] Successfully declared queue')
             except Exception:
-                self.log.exception('Failed to declare queue')
+                self.log.exception(f'[{self.__id}] Failed to declare queue')
                 return False
         return True
 
     def __handle_blocked_connection(self):
-        self.log.info('Connection blocked, waiting for unblock from server...')
+        self.log.info(f'[{self.__id}] Connection blocked, waiting for unblock from server...')
         while self.__conn_blocked:
             sleep(.5)
-        self.log.info('Connection unblocked, resuming operations...')
+        self.log.info(f'[{self.__id}] Connection unblocked, resuming operations...')
 
     def __can_send(self) -> bool:
         if self.__conn_blocked:
@@ -654,39 +681,42 @@ class JobPublisher():
         if isinstance(msg, bytes):
             if self.__can_send():
                 try:
-                    properties = BasicProperties(content_type='application/octet-stream', delivery_mode=2)
-                    self.__channel.basic_publish(self.__exchange, self.__route, msg, properties)
-                    self.log.info(f'Sent job to queue: {job_id[:8]}')
+                    self.__channel.basic_publish(self.__exchange, self.__route, msg, BasicProperties(
+                        content_type='application/octet-stream',
+                        delivery_mode=2,
+                        message_id=job_id
+                    ))
+                    self.log.info(f'[{self.__id}] Sent job to queue: {job_id[:8]}')
                     return True
                 except Exception:
-                    self.log.exception('Failed to send message to queue')
+                    self.log.exception(f'[{self.__id}] Failed to send message to queue')
             else:
-                self.log.error('Failed to send message to queue')
+                self.log.error(f'[{self.__id}] Failed to send message to queue')
         else:
-            self.log.error(f'Invalid message type: {type(msg)}')
+            self.log.error(f'[{self.__id}] Invalid message type: {type(msg)}')
         return False
 
     def start(self):
         if self.__thread:
-            self.log.error('Broker already running')
+            self.log.error(f'[{self.__id}] Broker already running')
             return False
-        self.log.info('Starting broker')
+        self.log.info(f'[{self.__id}] Starting broker')
         try:
             self.__thread = Thread(target=self.__start_io_loop, daemon=True)
             self.__thread.start()
             if self.__wait_for_exchange_declare():
                 return True
-            self.log.error('Failed to start broker')
+            self.log.error(f'[{self.__id}] Failed to start broker')
             return False
         except Exception:
-            self.log.exception('Failed to start broker')
+            self.log.exception(f'[{self.__id}] Failed to start broker')
         return False
 
     def stop(self):
-        self.log.info('Stopping broker')
+        self.log.info(f'[{self.__id}] Stopping broker')
         if self.__stop_io_loop():
             return self.__stop_thread()
-        self.log.error('Failed to stop broker')
+        self.log.error(f'[{self.__id}] Failed to stop broker')
         return False
 
 
@@ -694,10 +724,11 @@ class JobScheduler():
     def __init__(self):
         self.log = get_logger()
         self.stop_trigger = Event()
+        self.__db = Mongo('parent', self.log)
         self.__run_job_queue = Queue()
         self.__web_server = WebServer(self.__run_job_queue, self.log)
         self._crons = schedule
-        self.__pool = ThreadPoolExecutor(3, initializer=self.__init_worker)
+        self.__pool = ThreadPoolExecutor(3, initializer=self.__init_scheduler)
         if not self.__web_server.start():
             raise Exception('Failed to start web server')
 
@@ -708,11 +739,13 @@ class JobScheduler():
         self.__pool.shutdown(wait=False)
         self.__web_server.stop()
 
-    def __init_worker(self):
-        thread_local.db = Mongo(self.log)
-        thread_local.publisher = JobPublisher(self.log)
+    def __init_scheduler(self):
+        thread_local.sched_id = str(uuid4())[:8]
+        self.log.info(f'Initializing scheduler {thread_local.sched_id}')
+        thread_local.db = Mongo(thread_local.sched_id, self.log)
+        thread_local.publisher = JobPublisher(thread_local.sched_id, self.log)
         if not thread_local.publisher.start():
-            raise Exception('Failed to start job publisher')
+            raise Exception(f'[{thread_local.sched_id}] Failed to start job publisher')
 
     def __create_cron_job(self, cron: Dict):
         freq = cron.get('frequency')
@@ -738,7 +771,7 @@ class JobScheduler():
         return None
 
     def __get_crons(self):
-        return Mongo(self.log).get_all('crons', {'disabled': False})
+        return self.__db.get_all('crons', {'disabled': False})
 
     def get_scheduled_run_now_jobs(self):
         jobs = []
@@ -764,6 +797,7 @@ class JobScheduler():
 
     def __publish_job(self, cron: Dict, job_id: str = None):
         try:
+            now = datetime.now()
             job = {
                 '_id': job_id or str(uuid4()),
                 'name': cron.get('name', ''),
@@ -773,18 +807,21 @@ class JobScheduler():
                 'hostInventory': cron.get('hostInventory', {}),
                 'extraVars': cron.get('extraVars', {}),
                 'state': 'pending',
-                'scheduled': datetime.now(),
+                'resendAttempt': 0,
+                'resent': now.isoformat(),
+                'scheduled': now.isoformat(),
+                'expiryTime': now + timedelta(days=7),
                 'start': None,
                 'end': None,
                 'result': None,
                 'errors': [],
             }
-            thread_local.publisher.send_msg(dumps(job).encode(), job.get('_id'))
-            job['expiryTime'] = datetime.now() + timedelta(days=7)
+            if bool(thread_local.db.insert_one('jobs', job)):
+                del job['expiryTime']
+                return thread_local.publisher.send_msg(dumps(job).encode(), job.get('_id'))
         except Exception:
-            self.log.exception('Failed to send job to broker')
-            return False
-        return bool(thread_local.db.insert_one('jobs', job))
+            self.log.exception(f'[{thread_local.sched_id}] Failed to publish job')
+        return False
 
     def _run_cron(self, cron: Dict, job_id: str = None):
         self.__pool.submit(self.__publish_job, cron, job_id)
@@ -798,15 +835,62 @@ class JobScheduler():
                 return False
         return True
 
+    def __reschedule_job(self, job: Dict, attempt: int = 1):
+        self.log.info(f'[{thread_local.sched_id}] Resending job {job.get("_id")}')
+        job['resendAttempt'] = attempt
+        job['resent'] = datetime.now()
+        if bool(thread_local.db.update_one('jobs', {'_id': job.get('_id')}, {'$set': job})):
+            if thread_local.publisher.send_msg(dumps(job, cls=DateTimeEncoder).encode(), job.get('_id')):
+                return True
+        self.log.error(f'[{thread_local.sched_id}] Failed to reschedule job {job.get("_id")}')
+        return False
+
+    def __get_latest_completed_job(self):
+        cursor = self.__db.get_all_with_cursor('jobs', {'state': 'completed'})
+        if cursor:
+            try:
+                latest = list(cursor.sort('scheduled', DESCENDING).limit(1))
+                if latest:
+                    return datetime.fromisoformat(latest[0].get('scheduled'))
+            except Exception:
+                self.log.exception('Failed to get latest completed job')
+        return None
+
+    def reschedule_jobs_check(self):
+        '''if you get the latest completed job and its scheduled data is past the pending job then reschedule it as
+        it was abyssed
+
+        need to create a cli command that reschedules all pending jobs that way it can be cleaned up.
+
+        need to create a cli command that allows you to cancel pending jobs or all pending jobs
+        '''
+        now = datetime.now()
+        latest = self.__get_latest_completed_job()
+        if latest:
+            jobs = self.__db.get_all('jobs', {'state': 'pending'})
+            for job in jobs:
+                if datetime.fromisoformat(job.get('scheduled')) < latest:
+                    attempt = job.get('resendAttempt', 0)
+                    if attempt < 3:
+                        delta = now - timedelta(minutes=attempt + 1)
+                        if job.get('resent', delta) <= delta:
+                            self.__pool.submit(self.__reschedule_job, job, attempt + 1)
+            return True
+
 
 def main():
     with JobScheduler() as scheduler:
         if not scheduler.set_cron_schedule():
             exit(1)
+        cnt = 0
         while not scheduler.stop_trigger.is_set():
             scheduler._crons.run_pending()
             scheduler.get_scheduled_run_now_jobs()
+            if cnt == 60:
+                scheduler.reschedule_jobs_check()
+                cnt = 0
             sleep(1)
+            cnt += 1
     exit(0)
 
 

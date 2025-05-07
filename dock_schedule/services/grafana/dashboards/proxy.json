@@ -5,6 +5,17 @@
   "liveNow": false,
   "panels": [
     {
+      "title": "Overview",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
       "description": "Current state of the proxy service",
       "fieldConfig": {
         "defaults": {
@@ -31,7 +42,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 3, "x": 0, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 1
+      },
       "options": {
         "justifyMode": "auto",
         "orientation": "horizontal",
@@ -102,7 +118,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 4, "x": 3, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 3,
+        "y": 1
+      },
       "links": [],
       "options": {
         "orientation": "auto",
@@ -178,7 +199,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 4, "x": 7, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 7,
+        "y": 1
+      },
       "links": [],
       "options": {
         "orientation": "auto",
@@ -254,7 +280,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 4, "x": 11, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 11,
+        "y": 1
+      },
       "links": [],
       "options": {
         "orientation": "auto",
@@ -285,7 +316,7 @@
       "type": "gauge"
     },
     {
-      "description": "Active connections currently writing. High values indicate slow client download speeds, large payloads being sent or streaming, or latency in the backend servics.",
+      "description": "Active connections currently writing. High values indicate slow client download speeds, large payloads being sent or streaming, or latency in the backend services.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -330,7 +361,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 4, "x": 15, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 15,
+        "y": 1
+      },
       "links": [],
       "options": {
         "orientation": "auto",
@@ -406,7 +442,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 4, "x": 19, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 19,
+        "y": 1
+      },
       "links": [],
       "options": {
         "orientation": "auto",
@@ -437,306 +478,341 @@
       "type": "gauge"
     },
     {
-      "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+      "title": "Activity",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
       },
-      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4
-      },
-      "panels": [],
-      "title": "Metrics",
-      "type": "row"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "decimals": null,
-      "description": "",
-      "fill": 1,
-      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 5
-      },
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "hideEmpty": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
+      "panels": [
         {
-          "expr": "irate(nginx_connections_accepted{instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "instant": false,
-          "intervalFactor": 1,
-          "legendFormat": "accepted",
-          "refId": "A"
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "decimals": null,
+          "description": "",
+          "fill": 1,
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 0,
+            "y": 6
+          },
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "hideEmpty": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {},
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "increase(nginx_connections_accepted{instance=~\"$instance\"}[$__rate_interval])",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "accepted",
+              "refId": "A"
+            },
+            {
+              "expr": "increase(nginx_connections_accepted{instance=~\"$instance\"}[$__rate_interval]) - increase(nginx_connections_handled{instance=~\"$instance\"}[$__rate_interval])",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 1,
+              "legendFormat": "dropped",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Connections Processed",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 1,
+              "format": "short",
+              "label": "Connections",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
-          "expr": "irate(nginx_connections_accepted{instance=~\"$instance\"}[5m]) - irate(nginx_connections_handled{instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "instant": false,
-          "intervalFactor": 1,
-          "legendFormat": "dropped",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Processed connections",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": 1,
-          "format": "short",
-          "label": "Connections (rate)",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "decimals": 0,
-      "fill": 1,
-      "gridPos": {"h": 10, "w": 24, "x": 0,"y": 15},
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "nginx_connections_active{instance=~\"$instance\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "active",
-          "refId": "A"
-        },
-        {
-          "expr": "nginx_connections_reading{instance=~\"$instance\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "reading",
-          "refId": "B"
-        },
-        {
-          "expr": "nginx_connections_waiting{instance=~\"$instance\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "waiting",
-          "refId": "C"
-        },
-        {
-          "expr": "nginx_connections_writing{instance=~\"$instance\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "writing",
-          "refId": "D"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Connection Activity",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "decimals": 0,
-          "format": "short",
-          "label": "Connections",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "fill": 1,
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 12,
+            "y": 6
+          },
+          "legend": {
+            "alignAsTable": false,
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "rightSide": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {},
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "nginx_connections_active{instance=~\"$instance\"}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "active",
+              "refId": "A"
+            },
+            {
+              "expr": "nginx_connections_reading{instance=~\"$instance\"}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "reading",
+              "refId": "B"
+            },
+            {
+              "expr": "nginx_connections_waiting{instance=~\"$instance\"}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "waiting",
+              "refId": "C"
+            },
+            {
+              "expr": "nginx_connections_writing{instance=~\"$instance\"}",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "writing",
+              "refId": "D"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Connection States",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 0,
+              "format": "short",
+              "label": "Connections",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fill": 1,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 18
+          },
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {},
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(nginx_http_requests_total{instance=~\"$instance\"}[$__rate_interval])",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Requests",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests / s",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "Requests",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 50,
+                "gradientMode": "none"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "RGB(0, 255, 255)", "value": 0}
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          }
         }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fill": 1,
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 25},
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(nginx_http_requests_total{instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "total requests",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Total requests",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      ]
     }
   ],
   "refresh": "15s",
@@ -748,7 +824,7 @@
         "datasource": {"type": "prometheus", "uid": "prometheus"},
         "name": "instance",
         "label": "Host",
-        "hide": 0,
+        "hide": 2,
         "includeAll": false,
         "multi": false,
         "query": "label_values(nginx_up, instance)",
@@ -766,5 +842,5 @@
     "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
   },
   "timezone": "browser",
-  "title": "Proxy Service"
+  "title": "Proxy"
 }
