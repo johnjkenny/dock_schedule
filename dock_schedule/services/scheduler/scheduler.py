@@ -836,9 +836,9 @@ class JobScheduler():
         return True
 
     def __reschedule_job(self, job: Dict, attempt: int = 1):
-        self.log.info(f'[{thread_local.sched_id}] Resending job {job.get("_id")}')
+        self.log.info(f'[{thread_local.sched_id}] Resending job {job.get("_id")} attempt {attempt}')
         job['resendAttempt'] = attempt
-        job['resent'] = datetime.now()
+        job['resent'] = datetime.now().isoformat()
         if bool(thread_local.db.update_one('jobs', {'_id': job.get('_id')}, {'$set': job})):
             if thread_local.publisher.send_msg(dumps(job, cls=DateTimeEncoder).encode(), job.get('_id')):
                 return True
@@ -857,12 +857,10 @@ class JobScheduler():
         return None
 
     def reschedule_jobs_check(self):
-        '''if you get the latest completed job and its scheduled data is past the pending job then reschedule it as
-        it was abyssed
+        '''
+        # ToDo: need to create a cli command that reschedules all pending jobs that way it can be cleaned up.
 
-        need to create a cli command that reschedules all pending jobs that way it can be cleaned up.
-
-        need to create a cli command that allows you to cancel pending jobs or all pending jobs
+        # ToDo: need to create a cli command that allows you to cancel pending jobs or all pending jobs
         '''
         now = datetime.now()
         latest = self.__get_latest_completed_job()
@@ -870,12 +868,10 @@ class JobScheduler():
             jobs = self.__db.get_all('jobs', {'state': 'pending'})
             for job in jobs:
                 if datetime.fromisoformat(job.get('scheduled')) < latest:
-                    attempt = job.get('resendAttempt', 0)
-                    if attempt < 3:
-                        delta = now - timedelta(minutes=attempt + 1)
-                        if job.get('resent', delta) <= delta:
-                            self.__pool.submit(self.__reschedule_job, job, attempt + 1)
-            return True
+                    attempt = job.get('resendAttempt', 0) + 1
+                    if attempt < 4:
+                        if datetime.fromisoformat(job.get('resent')) < now - timedelta(minutes=attempt):
+                            self.__pool.submit(self.__reschedule_job, job, attempt)
 
 
 def main():
