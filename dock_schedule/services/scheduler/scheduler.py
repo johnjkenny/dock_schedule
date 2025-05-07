@@ -7,7 +7,7 @@ from threading import Thread, Event, local
 from multiprocessing import Process, Queue
 from queue import Empty
 from uuid import uuid4
-from json import dumps, loads, JSONEncoder
+from json import loads
 from typing import Dict
 from urllib.parse import quote_plus
 from datetime import datetime, timedelta
@@ -40,13 +40,6 @@ def get_logger():
         stream_handler.setFormatter(formatter)
         log.addHandler(stream_handler)
     return log
-
-
-class DateTimeEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return super().default(obj)
 
 
 class Mongo():
@@ -571,7 +564,7 @@ class JobPublisher():
 
     def __returned_to_sender_handler(self, ch: Channel, _: Basic.Deliver, properties: BasicProperties, body: bytes):
         try:
-            job_id = loads(body.decode()).get('_id')
+            job_id = body.decode()
             self.log.error(f'[{self.__id}] Message returned for job ID {job_id}. Resending to queue...')
             sleep(1)
             ch.basic_publish(
@@ -818,7 +811,7 @@ class JobScheduler():
             }
             if bool(thread_local.db.insert_one('jobs', job)):
                 del job['expiryTime']
-                return thread_local.publisher.send_msg(dumps(job).encode(), job.get('_id'))
+                return thread_local.publisher.send_msg(job['_id'].encode(), job['_id'])
         except Exception:
             self.log.exception(f'[{thread_local.sched_id}] Failed to publish job')
         return False
@@ -840,7 +833,7 @@ class JobScheduler():
         job['resendAttempt'] = attempt
         job['resent'] = datetime.now().isoformat()
         if bool(thread_local.db.update_one('jobs', {'_id': job.get('_id')}, {'$set': job})):
-            if thread_local.publisher.send_msg(dumps(job, cls=DateTimeEncoder).encode(), job.get('_id')):
+            if thread_local.publisher.send_msg(job['_id'].encode(), job['_id']):
                 return True
         self.log.error(f'[{thread_local.sched_id}] Failed to reschedule job {job.get("_id")}')
         return False
@@ -862,16 +855,17 @@ class JobScheduler():
 
         # ToDo: need to create a cli command that allows you to cancel pending jobs or all pending jobs
         '''
-        now = datetime.now()
-        latest = self.__get_latest_completed_job()
-        if latest:
-            jobs = self.__db.get_all('jobs', {'state': 'pending'})
-            for job in jobs:
-                if datetime.fromisoformat(job.get('scheduled')) < latest:
-                    attempt = job.get('resendAttempt', 0) + 1
-                    if attempt < 4:
-                        if datetime.fromisoformat(job.get('resent')) < now - timedelta(minutes=attempt):
-                            self.__pool.submit(self.__reschedule_job, job, attempt)
+        pending = self.__db.get_all('jobs', {'state': 'pending'})
+        if pending:
+            latest = self.__get_latest_completed_job()
+            if latest:
+                now = datetime.now()
+                for job in pending:
+                    if datetime.fromisoformat(job.get('scheduled')) < latest:
+                        attempt = job.get('resendAttempt', 0) + 1
+                        if attempt < 4:
+                            if datetime.fromisoformat(job.get('resent')) < now - timedelta(minutes=attempt):
+                                self.__pool.submit(self.__reschedule_job, job, attempt)
 
 
 def main():

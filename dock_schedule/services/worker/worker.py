@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import ssl
-import json
 import logging
 from time import sleep, gmtime
 from threading import Thread, Event, local
@@ -40,7 +39,7 @@ def get_logger():
 
 
 class Mongo():
-    def __init__(self, client_id: str or None, logger: logging.Logger = None):
+    def __init__(self, client_id: str = None, logger: logging.Logger = None):
         self.log = logger
         self.__id = client_id or str(uuid4())[:8]
         self.__client: MongoClient | None = None
@@ -113,6 +112,17 @@ class Mongo():
                 self.log.error(f'[{self.__id}] Failed to update data: {error.details}')
             except Exception:
                 self.log.exception(f'[{self.__id}] Failed to update document: {query}')
+        return None
+
+    def get_one(self, collection_name: str, *filters: dict):
+        collection = self.__get_collection(collection_name)
+        if collection is not None:
+            try:
+                return collection.find_one(*filters)
+            except OperationFailure as error:
+                self.log.error(f'[{self.__id}] Failed to find data: {error.details}')
+            except Exception:
+                self.log.exception(f'[{self.__id}] Failed to find data')
         return None
 
 
@@ -446,31 +456,19 @@ class Worker():
             thread.start()
             self.__threads.append(thread)
 
-    def __convert_job_request(self, job_request: bytes):
-        try:
-            job = json.loads(job_request.decode())
-            if isinstance(job, dict):
-                return job
-            self.log.error(f'[{thread_local.consumer_id}] Job request is not a dictionary: {type(job)}')
-        except Exception:
-            self.log.exception(f'[{thread_local.consumer_id}] Failed to convert job request')
-        return None
-
-    def __rescheduled_job_check(self, job: Dict):
-        '''
-        get job state from DB- and set to running if set to pending.
-        '''
-        pass
-
     def __job_request_handler(self, ch: Channel, method: Basic.Deliver, body: bytes):
-        job = self.__convert_job_request(body)
+        job = thread_local.db.get_one('jobs', {'_id': body.decode()})
         if job:
-            # ToDo: add db check to see if the job has already been processed incase of duplicate messages
-            self.run_job(job)
-        try:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-        except Exception:
-            self.log.exception(f'[{thread_local.consumer_id}] Failed to ack message')
+            if job.get('state', '') == 'pending':
+                self.run_job(job)
+            else:
+                self.log.info(f'[{thread_local.consumer_id}] Job already running: {job.get("_id")[:8]}')
+            try:
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+            except Exception:
+                self.log.exception(f'[{thread_local.consumer_id}] Failed to ack message')
+        else:
+            self.log.error(f'[{thread_local.consumer_id}] Job not found in database: {body.decode()}')
 
     @property
     def ansible_env_vars(self) -> Dict:
