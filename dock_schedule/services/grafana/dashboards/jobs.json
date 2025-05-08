@@ -15,8 +15,6 @@
         "y": 0
       }
     },
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -87,11 +85,6 @@
       "title": "Pending Jobs",
       "type": "stat"
     },
-
-
-
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -159,10 +152,6 @@
       "title": "Running Jobs",
       "type": "stat"
     },
-
-
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -229,10 +218,6 @@
       "title": "Successful Jobs",
       "type": "stat"
     },
-
-
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -300,8 +285,6 @@
       "title": "Failed Jobs",
       "type": "stat"
     },
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -437,8 +420,6 @@
       "title": "Total Jobs",
       "type": "stat"
     },
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -577,8 +558,6 @@
       "title": "Schedulers",
       "type": "stat"
     },
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -646,9 +625,6 @@
       "title": "Workers",
       "type": "stat"
     },
-
-
-
     {
       "title": "Current",
       "type": "row",
@@ -660,8 +636,6 @@
         "y": 4
       },
       "panels": [
-
-
         {
           "bars": false,
           "dashLength": 10,
@@ -900,9 +874,6 @@
 
       ]
     },
-
-
-
     {
       "title": "Completed",
       "type": "row",
@@ -914,11 +885,6 @@
         "y": 6
       },
       "panels": [
-
-
-
-
-
         {
           "bars": false,
           "dashLength": 10,
@@ -1075,11 +1041,7 @@
 
       ]
     }
-
-
-
   ],
-
   "refresh": "15s",
   "style": "dark",
   "tags": [
@@ -1140,5 +1102,6 @@
       "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
     },
     "timezone": "browser",
-    "title": "Jobs"
+    "title": "Jobs",
+    "uid": "job-metrics"
 }

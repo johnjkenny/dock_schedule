@@ -144,7 +144,7 @@ services:
     build: /opt/dock-schedule/prometheus
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /opt/dock-schedule/prometheus/data:/prometheus
+      - /opt/dock-schedule/prometheus/data:/prometheus/data
       - /opt/dock-schedule/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - dock-schedule-proxy
