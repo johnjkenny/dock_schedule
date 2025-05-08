@@ -1,0 +1,140 @@
+{
+  "description": "Swarm Cluster Overview",
+  "editable": true,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "panels": [
+
+
+
+    {
+      "title": "Overview",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+
+
+
+
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": "N/A"},
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 1},
+              {"color": "green", "value": 2}
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 0,
+        "y": 1
+      },
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "count(node_uname_info{job=\"$job\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Nodes",
+      "type": "stat"
+    }
+
+
+
+
+  ],
+  "refresh": "15s",
+  "style": "dark",
+  "tags": [
+      "swarm",
+      "cluster",
+      "nodes"
+    ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "label": "job",
+        "multi": false,
+        "name": "job",
+        "options": [],
+        "query": "Node-Scrape",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "custom",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {"from": "now-15m", "to": "now"},
+    "timepicker": {
+      "refresh_intervals": ["15s", "30s", "1m", "5m", "10m"],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "timezone": "browser",
+    "title": "Swarm",
+    "uid": "swarm-metrics"
+}
