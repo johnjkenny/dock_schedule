@@ -1485,14 +1485,100 @@
           "title": "CPU Busy",
           "type": "timeseries"
         },
+
+
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 50,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          },
+          "options": {
+            "alertThreshold": true,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}[$__rate_interval])) by (name) * 100",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Container CPU Usage",
+          "type": "timeseries"
+        },
         {
           "title": "CPU Usage",
           "type": "stat",
           "gridPos": {
             "h": 12,
             "w": 12,
-            "x": 12,
-            "y": 9
+            "x": 0,
+            "y": 21
           },
           "datasource": {
             "type": "prometheus",
@@ -1633,7 +1719,7 @@
           "gridPos": {
             "h": 12,
             "w": 12,
-            "x": 0,
+            "x": 12,
             "y": 21
           },
           "links": [],
@@ -1695,19 +1781,22 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
-                "fillOpacity": 40,
+                "fillOpacity": 50,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -1724,21 +1813,11 @@
                   "mode": "off"
                 }
               },
-              "links": [],
               "mappings": [],
               "min": 0,
               "thresholds": {
                 "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
+                "steps": []
               },
               "unit": "bytes"
             },
@@ -2094,6 +2173,90 @@
             }
           ],
           "title": "Memory Usage",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 50,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 12,
+            "y": 34
+          },
+          "options": {
+            "alertThreshold": true,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_memory_rss{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}) by (name)",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Container Memory Usage",
           "type": "timeseries"
         }
       ]
@@ -2799,6 +2962,88 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "description": "This does not account for persistent volumes assigned to the container like mongoDB, prometheus and rabbitmq databases.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 40,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 12,
+            "y": 82
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_fs_usage_bytes{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}) by (name)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Container Disk Space Usage",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "description": "Disk space used of all mounted filesystems",
           "fieldConfig": {
             "defaults": {
@@ -2849,7 +3094,7 @@
           },
           "gridPos": {
             "h": 12,
-            "w": 24,
+            "w": 12,
             "x": 0,
             "y": 82
           },
@@ -2940,7 +3185,7 @@
                 "mode": "absolute",
                 "steps": []
               },
-              "unit": "bps"
+              "unit": "Bps"
             },
             "overrides": []
           },
@@ -2955,20 +3200,27 @@
               "calcs": [],
               "displayMode": "list",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": false
             },
             "tooltip": {
               "mode": "multi",
-              "sort": "none"
+              "sort": "desc"
             }
           },
           "targets": [
             {
-              "expr": "irate(node_network_transmit_bytes_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])*8",
+              "expr": "sum(rate(container_network_transmit_bytes_total{instance=\"$node\", job=\"Container-Scrape\", id=\"/\"}[$__rate_interval])) by (interface)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{device}}",
+              "legendFormat": "{{interface}}",
               "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "sum(rate(container_network_transmit_bytes_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}[$__rate_interval])) by (name)",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "B",
               "step": 240
             }
           ],
@@ -3022,7 +3274,7 @@
                 "mode": "absolute",
                 "steps": []
               },
-              "unit": "bps"
+              "unit": "Bps"
             },
             "overrides": []
           },
@@ -3037,20 +3289,27 @@
               "calcs": [],
               "displayMode": "list",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": false
             },
             "tooltip": {
               "mode": "multi",
-              "sort": "none"
+              "sort": "desc"
             }
           },
           "targets": [
             {
-              "expr": "irate(node_network_receive_bytes_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])*8",
+              "expr": "sum(rate(container_network_receive_bytes_total{instance=\"$node\", job=\"Container-Scrape\", id=\"/\"}[$__rate_interval])) by (interface)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{device}}",
+              "legendFormat": "{{interface}}",
               "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "sum(rate(container_network_receive_bytes_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}[$__rate_interval])) by (name)",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "B",
               "step": 240
             }
           ],
@@ -3070,7 +3329,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Packets",
+                "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -3118,22 +3377,29 @@
               "calcs": [],
               "displayMode": "list",
               "placement": "bottom",
-              "showLegend": true,
+              "showLegend": false,
               "width": 300
             },
             "tooltip": {
               "mode": "multi",
-              "sort": "none"
+              "sort": "desc"
             }
           },
           "targets": [
             {
-              "expr": "irate(node_network_transmit_packets_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
+              "expr": "sum(rate(container_network_transmit_packets_total{instance=\"$node\", job=\"Container-Scrape\", id=\"/\"}[$__rate_interval])) by (interface)",
               "format": "time_series",
-              "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "{{device}}",
+              "legendFormat": "{{interface}}",
               "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "sum(rate(container_network_transmit_packets_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}[$__rate_interval])) by (name)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "B",
               "step": 240
             }
           ],
@@ -3153,7 +3419,7 @@
               "custom": {
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "Packets",
+                "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
@@ -3201,26 +3467,213 @@
               "calcs": [],
               "displayMode": "list",
               "placement": "bottom",
-              "showLegend": true,
+              "showLegend": false,
               "width": 300
             },
             "tooltip": {
               "mode": "multi",
-              "sort": "none"
+              "sort": "desc"
             }
           },
           "targets": [
             {
-              "expr": "irate(node_network_receive_packets_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
+              "expr": "sum(rate(container_network_receive_packets_total{instance=\"$node\", job=\"Container-Scrape\", id=\"/\"}[$__rate_interval])) by (interface)",
               "format": "time_series",
-              "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "{{device}}",
+              "legendFormat": "{{interface}}",
               "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "sum(rate(container_network_receive_packets_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}[$__rate_interval])) by (name)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "B",
               "step": 240
             }
           ],
           "title": "Received Packets",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 0,
+            "y": 119
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false,
+              "width": 300
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_network_transmit_packets_dropped_total{instance=\"$node\", job=\"Container-Scrape\", id=\"/\"}) by (interface)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{interface}}",
+              "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "sum(container_network_transmit_packets_dropped_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}) by (name)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "B",
+              "step": 240
+            }
+          ],
+          "title": "Dropped Transmit Packets",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 12,
+            "x": 12,
+            "y": 119
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false,
+              "width": 300
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_network_receive_packets_dropped_total{instance=\"$node\", job=\"Container-Scrape\", id=\"/\"}) by (interface)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{interface}}",
+              "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "sum(container_network_receive_packets_dropped_total{instance=\"$node\", job=\"Container-Scrape\", container_label_com_docker_stack_namespace=\"dock-schedule\"}) by (name)",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{name}}",
+              "refId": "B",
+              "step": 240
+            }
+          ],
+          "title": "Dropped Receive Packets",
           "type": "timeseries"
         },
         {
