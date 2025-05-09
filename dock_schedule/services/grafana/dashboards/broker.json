@@ -5,1077 +5,1585 @@
     "graphTooltip": 1,
     "liveNow": false,
     "panels": [
+
       {
+        "title": "Overview",
+        "type": "row",
         "collapsed": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
         "gridPos": {
           "h": 1,
           "w": 24,
           "x": 0,
           "y": 0
-        },
-        "panels": [],
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "refId": "A"
-          }
-        ],
-        "title": "Scheduler",
-        "type": "row"
+        }
       },
+
+
       {
-        "description": "The number of jobs that are pending to be sent to workers. Each worker has their own queue. This will start filling up when the worker queues are full and a job cannot be sent to a worker. When this number is increasing it means to deploy more workers in the cluster.",
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "decimals": 0,
-        "fill": 1,
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 0,
-          "y": 1
-        },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "expr": "sum(rabbitmq_queue_messages_ready)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Queued Jobs",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Scheduler Queue",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 0,
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
+        "description": "Total jobs sitting in the job queue waiting to be sent to a worker. Have not been delivered to a worker yet. Indicates more workers need to be deployed",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "thresholds"
             },
-            "custom": {
-              "lineWidth": 1,
-              "fillOpacity": 50,
-              "gradientMode": "none"
-            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "yellow",
-                  "value": 5
-                },
-                {
-                  "color": "orange",
-                  "value": 10
-                },
-                {
-                  "color": "red",
-                  "value": 15
-                }
+                {"color": "red", "value": "N/A"},
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "orange", "value": 10},
+                {"color": "red", "value": 20}
               ]
             },
-            "unit": "short"
+            "unit": "locale"
           },
           "overrides": []
-        }
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 3,
+          "x": 0,
+          "y": 1
+        },
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "exemplar": false,
+            "expr": "sum(rabbitmq_queue_messages_ready)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Pending Jobs",
+        "type": "stat"
       },
+
+
+
+
+
       {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "description": "The rate of jobs that are un-routable and have been returned to sender to retry. This usually happens when the scheduler job queue has become too full.",
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "decimals": 0,
-        "fill": 1,
+        "description": "Jobs currently sent to workers and are either running or waiting to run by a worker",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": "N/A"},
+                {"color": "red", "value": 0},
+                {"color": "blue", "value": 1}
+                
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
         "gridPos": {
-          "h": 12,
-          "w": 12,
+          "h": 3,
+          "w": 3,
+          "x": 3,
+          "y": 1
+        },
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "exemplar": false,
+            "expr": "sum(rabbitmq_queue_messages_unacked)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Worker Queue",
+        "type": "stat"
+      },
+
+
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Amount of jobs scheduled by the scheduler and sent to the job broker to be sent to an available worker connection.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": "N/A"},
+                {"color": "yellow", "value": 0},
+                {"color": "green", "value": 1}
+                
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 3,
+          "x": 6,
+          "y": 1
+        },
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "exemplar": false,
+            "expr": "sum(rabbitmq_queue_messages_published_total)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Jobs Scheduled",
+        "type": "stat"
+      },
+
+
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Amount of jobs delivered to workers in the cluster and about to be worked on.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": "N/A"},
+                {"color": "yellow", "value": 0},
+                {"color": "green", "value": 1}
+                
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 3,
+          "x": 9,
+          "y": 1
+        },
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "exemplar": false,
+            "expr": "sum(rabbitmq_global_messages_delivered_consume_manual_ack_total)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Jobs Delivered",
+        "type": "stat"
+      },
+
+
+
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Amount of jobs completed in the cluster",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": "N/A"},
+                {"color": "yellow", "value": 0},
+                {"color": "green", "value": 1}
+                
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 3,
           "x": 12,
           "y": 1
         },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
         },
-        "lines": true,
-        "linewidth": 2,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
         "targets": [
           {
-            "expr": "sum(rate(rabbitmq_global_messages_unroutable_returned_total[60s]))",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Returned Jobs",
+            "exemplar": false,
+            "expr": "sum(rabbitmq_global_messages_acknowledged_total)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
             "refId": "A"
           }
         ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Returned Jobs / s",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
+        "title": "Completed Jobs",
+        "type": "stat"
+      },
+
+
+
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
         },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 3,
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "softMax": 0.2,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
+        "description": "Total amount of connections from the schedulers to the job broker. Each scheduler should have a max of three connections and there should only be one scheduler in the cluster.",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "fixed",
-              "fixedColor": "orange"
+              "mode": "thresholds"
             },
-            "custom": {
-              "lineWidth": 2,
-              "fillOpacity": 70,
-              "gradientMode": "none"
-            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {
-                  "color": "orange",
-                  "value": null
-                }
+                {"color": "red", "value": "N/A"},
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
               ]
             },
-            "unit": "short"
+            "unit": "locale"
           },
           "overrides": []
-        }
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 3,
+          "x": 15,
+          "y": 1
+        },
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "exemplar": false,
+            "expr": "sum(rabbitmq_global_publishers)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Scheduler Connections",
+        "type": "stat"
       },
+
+
       {
-        "description": "The rate of jobs being sent to workers in the cluster.",
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "decimals": 0,
-        "fill": 1,
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 0,
-          "y": 13
-        },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "expr": "sum(irate(rabbitmq_queue_messages_published_total[60s]))",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Scheduled Jobs",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Scheduled Jobs / s",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "mode": "time",
-          "show": true
-        },
-        "yaxes": [
-          {
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false
-        },
+        "description": "Total amount of connections from the workers to the job broker. Each worker should have three connections.",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "palette-classic"
+              "mode": "thresholds"
             },
-            "custom": {
-              "lineWidth": 1,
-              "fillOpacity": 50,
-              "gradientMode": "none"
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": "N/A"},
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
             },
-            "unit": "short"
+            "unit": "locale"
           },
           "overrides": []
-        }
-      },
-      {
-        "description": "The number of scheduler connections. The scheduler uses threads to schedule jobs in parallel and each thread has its own connection. Each scheduler should have three connections and there should only be one scheduler in the cluster.",
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
         },
-        "decimals": 0,
-        "fill": 1,
         "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 12,
-          "y": 13
+          "h": 3,
+          "w": 3,
+          "x": 18,
+          "y": 1
         },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
         },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
         "targets": [
           {
-            "expr": "sum(rabbitmq_global_publishers)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Schedulers",
+            "exemplar": false,
+            "expr": "sum(rabbitmq_consumers)",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
             "refId": "A"
           }
         ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Scheduler Connections",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 0,
-            "format": "short",
-            "label": "Connections",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        }
+        "title": "Worker Connections",
+        "type": "stat"
       },
+
+
+
+
+
+
+
+
+
       {
-        "collapsed": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
+        "title": "Scheduler",
+        "type": "row",
+        "collapsed": true,
         "gridPos": {
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 14
+          "y": 4
         },
-        "panels": [],
-        "targets": [
+        "panels": [
+
           {
+            "description": "The number of jobs that are pending to be sent to workers. Each worker has their own queue. This will start filling up when the worker queues are full and a job cannot be sent to a worker. When this number is increasing it means to deploy more workers in the cluster.",
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
-            "refId": "A"
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 0,
+              "y": 5
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rabbitmq_queue_messages_ready)",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Queued Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Scheduler Queue",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 0,
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 50,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 5
+                    },
+                    {
+                      "color": "orange",
+                      "value": 10
+                    },
+                    {
+                      "color": "red",
+                      "value": 15
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
+          },
+          {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "description": "The rate of jobs that are un-routable and have been returned to sender to retry. This usually happens when the scheduler job queue has become too full.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 12,
+              "y": 5
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 2,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rate(rabbitmq_global_messages_unroutable_returned_total[60s]))",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Returned Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Returned Jobs / s",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 3,
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "softMax": 0.2,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                },
+                "custom": {
+                  "lineWidth": 2,
+                  "fillOpacity": 70,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "orange",
+                      "value": null
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
+          },
+          {
+            "description": "The rate of jobs being sent to workers in the cluster.",
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 0,
+              "y": 17
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(irate(rabbitmq_queue_messages_published_total[60s]))",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Scheduled Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Scheduled Jobs / s",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "mode": "time",
+              "show": true
+            },
+            "yaxes": [
+              {
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 50,
+                  "gradientMode": "none"
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
+          },
+          {
+            "description": "The number of scheduler connections. The scheduler uses threads to schedule jobs in parallel and each thread has its own connection. Each scheduler should have three connections and there should only be one scheduler in the cluster.",
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 12,
+              "y": 17
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rabbitmq_global_publishers)",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Schedulers",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Scheduler Connections",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 0,
+                "format": "short",
+                "label": "Connections",
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            }
           }
-        ],
+        ]
+      },
+
+
+
+      
+
+
+
+      {
         "title": "Workers",
-        "type": "row"
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "description": "Number of jobs sent to workers and are either running or waiting to run by a worker. Each worker has three threads and each thread can queue three jobs so each worker can be scheduled three active jobs and 6 inactive jobs for a total of 9 jobs.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "decimals": 0,
-        "fill": 1,
+        "type": "row",
+        "collapsed": true,
         "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 0,
-          "y": 15
-        },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "expr": "sum(rabbitmq_queue_messages_unacked)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Queued Jobs",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Worker Queue",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 0,
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "lineWidth": 1,
-              "fillOpacity": 50,
-              "gradientMode": "none"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "blue",
-                  "value": null
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        }
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "description": "The rate of jobs resent to workers. Usually happens when workers hold onto a job for too long or when a worker is decommissioned and its pending jobs were rescheduled to other workers in the cluster.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "decimals": 0,
-        "fill": 1,
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 12,
-          "y": 15
-        },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 2,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[60s]))",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Rescheduled Jobs",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Jobs Rescheduled / s",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 3,
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "softMax": 0.2,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "fixed",
-              "fixedColor": "orange"
-            },
-            "custom": {
-              "lineWidth": 2,
-              "fillOpacity": 70,
-              "gradientMode": "none"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "orange",
-                  "value": null
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        }
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "description": "The rate of jobs received by workers. You should try to match this to the number of scheduled jobs per second as best as possible. A quantity mismatch will cause the scheduler queue to start filling up and jobs will not run at the expected time.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "decimals": 0,
-        "fill": 1,
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 0,
-          "y": 27
-        },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[60s]))",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Received Jobs",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Jobs Received / s",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 0,
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "lineWidth": 1,
-              "fillOpacity": 50,
-              "gradientMode": "none"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "blue",
-                  "value": null
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        }
-      },
-      {
-        "description": "The number of worker connections. The workers use threads to run jobs in parallel and each thread has its own connection. Each worker should have three connections.",
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "decimals": 0,
-        "fill": 1,
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 12,
-          "y": 27
-        },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "expr": "sum(rabbitmq_consumers)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Workers",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Worker Connections",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "decimals": 0,
-            "format": "short",
-            "label": "Connections",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "lineWidth": 1,
-              "fillOpacity": 50,
-              "gradientMode": "none"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "blue",
-                  "value": null
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        }
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "description": "The rate of completed jobs.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "decimals": 0,
-        "fill": 1,
-        "gridPos": {
-          "h": 12,
+          "h": 1,
           "w": 24,
           "x": 0,
-          "y": 39
+          "y": 29
         },
-        "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "rightSide": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "links": [],
-        "nullPointMode": "null",
-        "options": {},
-        "percentage": false,
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
+        "panels": [
+
           {
-            "expr": "sum(rate(rabbitmq_global_messages_acknowledged_total[60s]))",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Completed Jobs",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Jobs Completed / s",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "description": "Number of jobs sent to workers and are either running or waiting to run by a worker. Each worker has three threads and each thread can queue three jobs so each worker can be scheduled three active jobs and 6 inactive jobs for a total of 9 jobs.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
             "decimals": 0,
-            "format": "short",
-            "label": "Jobs",
-            "logBase": 1,
-            "min": 0,
-            "max": null,
-            "show": true
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 0,
+              "y": 30
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rabbitmq_queue_messages_unacked)",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Queued Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Worker Queue",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 0,
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 50,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
           },
           {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "min": null,
-            "max": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "description": "The rate of jobs resent to workers. Usually happens when workers hold onto a job for too long or when a worker is decommissioned and its pending jobs were rescheduled to other workers in the cluster.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
             },
-            "custom": {
-              "lineWidth": 1,
-              "fillOpacity": 50,
-              "gradientMode": "none"
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 12,
+              "y": 30
             },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "blue",
-                  "value": null
-                }
-              ]
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
             },
-            "unit": "short"
+            "lines": true,
+            "linewidth": 2,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rate(rabbitmq_global_messages_redelivered_total[60s]))",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Rescheduled Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Jobs Rescheduled / s",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 3,
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "softMax": 0.2,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                },
+                "custom": {
+                  "lineWidth": 2,
+                  "fillOpacity": 70,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "orange",
+                      "value": null
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
           },
-          "overrides": []
-        }
+          {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "description": "The rate of jobs received by workers. You should try to match this to the number of scheduled jobs per second as best as possible. A quantity mismatch will cause the scheduler queue to start filling up and jobs will not run at the expected time.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 0,
+              "y": 42
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[60s]))",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Received Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Jobs Received / s",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 0,
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 50,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
+          },
+          {
+            "description": "The number of worker connections. The workers use threads to run jobs in parallel and each thread has its own connection. Each worker should have three connections.",
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 12,
+              "x": 12,
+              "y": 42
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rabbitmq_consumers)",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Workers",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Worker Connections",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 0,
+                "format": "short",
+                "label": "Connections",
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 50,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
+          },
+          {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "description": "The rate of completed jobs.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "decimals": 0,
+            "fill": 1,
+            "gridPos": {
+              "h": 12,
+              "w": 24,
+              "x": 0,
+              "y": 54
+            },
+            "legend": {
+              "alignAsTable": false,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "options": {},
+            "percentage": false,
+            "pointradius": 2,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "expr": "sum(rate(rabbitmq_global_messages_acknowledged_total[60s]))",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "Completed Jobs",
+                "refId": "A"
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "Jobs Completed / s",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+              "buckets": null,
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "decimals": 0,
+                "format": "short",
+                "label": "Jobs",
+                "logBase": 1,
+                "min": 0,
+                "max": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "show": true
+              }
+            ],
+            "yaxis": {
+              "align": false,
+              "alignLevel": null
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 50,
+                  "gradientMode": "none"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    }
+                  ]
+                },
+                "unit": "short"
+              },
+              "overrides": []
+            }
+          }
+
+        ]
       }
     ],
     "refresh": "15s",
