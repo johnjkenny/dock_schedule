@@ -1167,9 +1167,6 @@
       "title": "Swarm Share Total",
       "type": "stat"
     },
-
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -1239,10 +1236,6 @@
       "title": "Containers",
       "type": "stat"
     },
-
-
-
-
     {
       "title": "CPU",
       "type": "row",
@@ -1427,7 +1420,7 @@
           },
           "targets": [
             {
-              "expr": "sum(irate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"system\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
+              "expr": "sum(rate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"system\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1437,7 +1430,7 @@
               "step": 240
             },
             {
-              "expr": "sum(irate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"user\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
+              "expr": "sum(rate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"user\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "User",
@@ -1446,7 +1439,7 @@
               "step": 240
             },
             {
-              "expr": "sum(irate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"iowait\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
+              "expr": "sum(rate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"iowait\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "IOwait",
@@ -1455,7 +1448,7 @@
               "step": 240
             },
             {
-              "expr": "sum(irate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=~\".*irq\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
+              "expr": "sum(rate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=~\".*irq\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "IRQs",
@@ -1464,7 +1457,7 @@
               "step": 240
             },
             {
-              "expr": "sum(irate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\",  mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq'}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
+              "expr": "sum(rate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\",  mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq'}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Other",
@@ -1473,7 +1466,7 @@
               "step": 240
             },
             {
-              "expr": "sum(irate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"idle\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
+              "expr": "sum(rate(node_cpu_seconds_total{instance=\"$node\",job=\"$job\", mode=\"idle\"}[60s])) / scalar(count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu)))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Idle",
@@ -1485,8 +1478,6 @@
           "title": "CPU Busy",
           "type": "timeseries"
         },
-
-
         {
           "datasource": {
             "type": "prometheus",
@@ -2352,7 +2343,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_writes_completed_total{instance=\"$node\",job=\"$job\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_writes_completed_total{instance=\"$node\", job=\"$job\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}}",
               "refId": "A",
@@ -2442,7 +2433,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_reads_completed_total{instance=\"$node\",job=\"$job\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_reads_completed_total{instance=\"$node\", job=\"$job\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}}",
               "refId": "A",
@@ -2520,7 +2511,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_written_bytes_total{instance=\"$node\",job=\"$job\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_written_bytes_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2600,7 +2591,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_read_bytes_total{instance=\"$node\",job=\"$job\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_read_bytes_total{instance=\"$node\", job=\"$job\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2684,7 +2675,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_write_time_seconds_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]) / clamp_min(irate(node_disk_writes_completed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]), 1)",
+              "expr": "rate(node_disk_write_time_seconds_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]) / clamp_min(rate(node_disk_writes_completed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]), 1)",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "{{device}}",
@@ -2767,7 +2758,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_read_time_seconds_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]) / clamp_min(irate(node_disk_reads_completed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]), 1)",
+              "expr": "rate(node_disk_read_time_seconds_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]) / clamp_min(rate(node_disk_reads_completed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval]), 1)",
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "{{device}}",
@@ -2861,7 +2852,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_io_time_seconds_total{instance=\"$node\",job=\"$job\",device=~\"$diskdevices\"} [$__rate_interval])",
+              "expr": "rate(node_disk_io_time_seconds_total{instance=\"$node\", job=\"$job\"} [$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -2946,7 +2937,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_disk_io_time_weighted_seconds_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
+              "expr": "rate(node_disk_io_time_weighted_seconds_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
               "interval": "",
               "intervalFactor": 4,
               "legendFormat": "{{device}}",
@@ -3748,7 +3739,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_softnet_processed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
+              "expr": "rate(node_softnet_processed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -3832,7 +3823,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_softnet_dropped_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
+              "expr": "rate(node_softnet_dropped_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -3916,7 +3907,7 @@
           },
           "targets": [
             {
-              "expr": "irate(node_softnet_times_squeezed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
+              "expr": "rate(node_softnet_times_squeezed_total{instance=\"$node\",job=\"$job\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -4068,27 +4059,6 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "[a-z]+|nvme[0-9]+n[0-9]+|mmcblk[0-9]+",
-          "value": "[a-z]+|nvme[0-9]+n[0-9]+|mmcblk[0-9]+"
-        },
-        "hide": 2,
-        "includeAll": false,
-        "multi": false,
-        "name": "diskdevices",
-        "options": [
-          {
-            "selected": true,
-            "text": "[a-z]+|nvme[0-9]+n[0-9]+|mmcblk[0-9]+",
-            "value": "[a-z]+|nvme[0-9]+n[0-9]+|mmcblk[0-9]+"
-          }
-        ],
-        "query": "[a-z]+|nvme[0-9]+n[0-9]+|mmcblk[0-9]+",
-        "skipUrlSync": false,
-        "type": "custom"
       }
     ]
   },

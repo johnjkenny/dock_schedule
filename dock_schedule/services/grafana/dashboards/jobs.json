@@ -352,7 +352,6 @@
       "title": "Completed Jobs",
       "type": "stat"
     },
-
     {
       "datasource": {
         "type": "prometheus",
@@ -487,9 +486,6 @@
       "title": "Enabled Crons",
       "type": "stat"
     },
-
-
-
     {
       "datasource": {
         "type": "prometheus",
@@ -753,7 +749,6 @@
             "overrides": []
           }
         },
-
         {
           "bars": false,
           "dashLength": 10,
@@ -871,7 +866,6 @@
             "overrides": []
           }
         }
-
       ]
     },
     {
