@@ -249,7 +249,7 @@
           "step": 240
         }
       ],
-      "title": "Cluster Load (5M)",
+      "title": "Load (5M)",
       "type": "gauge"
     },
     {
@@ -1277,7 +1277,6 @@
         "y": 8
       },
       "panels": [
-
         {
           "type": "table",
           "title": "Swarm Nodes",
@@ -1288,45 +1287,43 @@
           "targets": [
             {
               "refId": "A",
-              "expr": "node_uname_info",
+              "expr": "count(count(node_cpu_seconds_total{mode=\"user\"}) by (cpu, instance)) by (instance)",
+              "instant": true
+            },
+            {
+              "refId": "B",
+              "expr": "node_memory_MemTotal_bytes",
+              
               "instant": true
             }
           ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "label_values"
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "renameByName": {
-                  "instance": "Instance",
-                  "release": "Kernel"
-                },
-                "excludeByName": {
-                  "__name__": true,
-                  "nodename": true,
-                  "sysname": true,
-                  "version": true,
-                  "domainname": true,
-                  "job": true,
-                  "machine": true,
-                  "os": true,
-                  "Time": true,
-                  "node_uname_info": true
-                },
-                "indexByName": {}
-              }
-            }
-          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 9
+          },
           "fieldConfig": {
             "defaults": {
               "custom": {}
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Memory"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -1338,7 +1335,6 @@
                     "value": [
                       {
                         "title": "View Node Dashboard",
-                        
                         "url": "/d/swarm-node-metrics/hosts?orgId=1&from=now-15m&to=now&timezone=browser&var-job=Node-Scrape&var-node=${__data.fields.instance}&refresh=15s",
                         "targetBlank": true
                       }
@@ -1348,51 +1344,6 @@
               }
             ]
           },
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "displayName": "instance",
-                "desc": false
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 8,
-            "x": 0,
-            "y": 9
-          }
-        },
-        {
-          "type": "table",
-          "title": " ",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "expr": "count(count(node_cpu_seconds_total{mode=\"user\"}) by (cpu, instance)) by (instance)",
-              "instant": true
-            }
-          ],
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "displayName": "instance",
-                "desc": false
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 3,
-            "x": 8,
-            "y": 9
-          },
           "transformations": [
             {
               "id": "labelsToFields",
@@ -1401,253 +1352,37 @@
               }
             },
             {
-              "id": "organize",
+              "id": "joinByField",
               "options": {
-                "renameByName": {
-                  "Value": "Cores"
-                },
-                "excludeByName": {
-                  "__name__": true,
-                  "job": true,
-                  "Time": true
-                }
-              }
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": "center"
-              },
-              "unit": "short"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "instance"
-                },
-                "properties": [
-                  {
-                    "id": "custom.displayMode",
-                    "value": "hidden"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "type": "table",
-          "title": " ",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "expr": "node_memory_MemTotal_bytes",
-              "instant": true
-            }
-          ],
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "displayName": "instance",
-                "desc": false
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 3,
-            "x": 11,
-            "y": 9
-          },
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "label_values"
+                "field": "instance"
               }
             },
             {
               "id": "organize",
               "options": {
                 "renameByName": {
-                  "node_memory_MemTotal_bytes": "RAM"
+                  "instance": "Instance",
+                  "release": "Kernel",
+                  "Value": "CPU Cores",
+                  "node_memory_MemTotal_bytes": "Memory"
+
                 },
                 "excludeByName": {
                   "__name__": true,
-                  "job": true,
-                  "Time": true
-                }
-              }
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": "center"
-              },
-              "unit": "bytes"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "instance"
-                },
-                "properties": [
-                  {
-                    "id": "custom.displayMode",
-                    "value": "hidden"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "type": "table",
-          "title": " ",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "expr": "node_filesystem_size_bytes{mountpoint=\"/\"}",
-              "instant": true
-            }
-          ],
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "displayName": "instance",
-                "desc": false
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 5,
-            "x": 14,
-            "y": 9
-          },
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "label_values"
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "renameByName": {
-                  "node_filesystem_size_bytes": "Root FS Size",
-                  "fstype": "Type"
-                },
-                "excludeByName": {
-                  "__name__": true,
-                  "job": true,
                   "Time": true,
+                  "job": true,
                   "device": true,
                   "mountpoint": true
+                },
+                "indexByName": {
+                  "instance": 0,
+                  "Value": 1,
+                  "node_memory_MemTotal_bytes": 2
                 }
               }
             }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": "center"
-              },
-              "unit": "bytes"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "instance"
-                },
-                "properties": [
-                  {
-                    "id": "custom.displayMode",
-                    "value": "hidden"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "type": "table",
-          "title": " ",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "expr": "count(container_start_time_seconds{container_label_com_docker_stack_namespace=\"dock-schedule\"}) by (instance)",
-              "instant": true
-            }
-          ],
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "displayName": "instance",
-                "desc": false
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 6,
-            "w": 3,
-            "x": 19,
-            "y": 9
-          },
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "label_values"
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "renameByName": {
-                  "Value": "Containers"
-                },
-                "excludeByName": {
-                  "__name__": true,
-                  "job": true,
-                  "Time": true
-                }
-              }
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": "center"
-              },
-              "unit": "short"
-            },
-            "overrides": []
-          }
+          ]
         }
-
-
       ]
     },
     {
