@@ -1,12 +1,10 @@
 - name: Install Firewalld
   ansible.builtin.package:
-    zone: public
     name: firewalld
     state: present
 
 - name: Start Firewalld
   ansible.builtin.systemd:
-    zone: public
     name: firewalld
     state: started
     enabled: true
