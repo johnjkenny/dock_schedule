@@ -3,18 +3,18 @@
 Dock-Schedule is a job application for scheduling and managing jobs using a docker swarm cluster
 
 The swarm stack consists of the following services:
-- broker: rabbitmq message broker
-- container_scraper: cadvisor container scraper to pull container metrics (global service, runs on all nodes)
-- grafana: grafana for visualizing metrics
-- mongodb: mongodb for storing and updating job data
-- mongodb_scraper: mongodb scraper to pull database metrics
-- node_scraper: node exporter to pull swarm host metrics (global service, runs on all nodes)
-- prometheus: prometheus server for collecting and storing metrics from scrape jobs (runs on manager node)
-- proxy: nginx reverse proxy for routing requests to the appropriate service and for SSL/TLS termination
-- proxy_scraper: nginx scraper to pull nginx metrics
-- registry: docker registry for storing the docker images used by the swarm services (runs on manager node)
-- scheduler: scheduler service for scheduling jobs in the swarm cluster (runs on manager node)
-- worker: worker service for executing jobs in the swarm cluster
+1. broker: rabbitmq message broker
+2. container_scraper: cadvisor container scraper to pull container metrics (global service, runs on all nodes)
+3. grafana: grafana for visualizing metrics
+4. mongodb: mongodb for storing and updating job data
+5. mongodb_scraper: mongodb scraper to pull database metrics
+6. node_scraper: node exporter to pull swarm host metrics (global service, runs on all nodes)
+7. prometheus: prometheus server for collecting and storing metrics from scrape jobs (runs on manager node)
+8. proxy: nginx reverse proxy for routing requests to the appropriate service and for SSL/TLS termination
+9. proxy_scraper: nginx scraper to pull nginx metrics
+10. registry: docker registry for storing the docker images used by the swarm services (runs on manager node)
+11. scheduler: scheduler service for scheduling jobs in the swarm cluster (runs on manager node)
+12. worker: worker service for executing jobs in the swarm cluster
 
 The proxy service exposes ports `80`, `443`, and `8080`. `80` reroutes to `443` and `443` routes to grafana service UI.
 Port `8080` routes to prometheus service UI where you can see the state of the swarm metric scrape jobs as well as run
@@ -29,6 +29,13 @@ replicas based on the backlog of jobs in the queue. Depending on the resources y
 node you may also have to increase/decrease the number of swarm nodes within the cluster to handle the load of the
 worker demand.
 
+
+# Prerequisites
+
+- Tested with rocky9.5
+- Requires python 3.10 or higher
+- Recommended to have a separate 5G data disk mounted on the swarm manger node at `/opt/dock-schedule` directory
+- Must have a deploy or manual steps for setting ansible public key to new swarm nodes `/home/ansible/.ssh/authorized_keys` file
 
 # Command Overview:
 
@@ -2630,3 +2637,86 @@ dock-schedule-3 (192.168.122.195)
 	    CPU (1m):    0.1%
 	    Memory Used: 29.47 MiB (3.7%)
 ```
+
+
+# Grafana
+
+Grafana is deployed in the stack so you can view the metrics of the cluster and services. The default username and
+password is `admin` and `admin`. You will be prompted to change the password on first login. You can access Grafana
+portal at `https://<swarm-host-ip>`. The stack uses a self-signed certificate so you will need to accept the
+certificate. There are 6 dashboards provided to help track performance, usage, and errors in the cluster.
+
+1. Broker Dashboard
+  This dashboard provides metrics on the job broker (rabbitmq). It provides data on pending jobs (backlog) where jobs
+  are waiting for a worker to become available to process the job. A backlog indicates there is not enough workers in
+  the cluster as each worker can run three jobs in parrellel and queue another 6 jobs. The dashboard also provides
+  metrics on the worker queue which should be 9x the number of workers in the cluster if fully utilized. It shows
+  metrics on the number of jobs scheduled, delivered, as well as the number of connections to the broker. Each
+  worker will have three connections to the broker and the scheduler will connect when a job is ready to be scheduled
+  and then stays connected. The scheduler can schedule three jobs in parrell and will establish the connections as the
+  load requires it.
+
+Example of broker dashboard:
+![broker-dashboard-1](assets/broker-1.png)
+![broker-dashboard-2](assets/broker-2.png)
+![broker-dashboard-3](assets/broker-3.png)
+
+2. Database Dashboard
+  This dashboard provides metrics on the MongoDB database. It provides data on the number of connections to the
+  database, operations per second broken down into inserts, updates, deletes, and reads (queries). It also provides
+  data on the latency for write, read, and command operations and tracks the job database growth and displays the
+  collection and index sizes.
+
+Example of database dashboard:
+![database-dashboard-1](assets/database-1.png)
+![database-dashboard-2](assets/database-2.png)
+![database-dashboard-3](assets/database-3.png)
+
+3. Hosts Dashboard
+  This dashboard provides metrics on the host systems within the cluster. It provides data on CPU, memory, disk, and 
+  network usage. It also provides data on the number of containers running on the host and the resources they are
+  consuming. Keep in mind that the NFS swarm share comes from the swarm manager device mounted on `/opt/dock-schedule`.
+  Any IO performance issues should be investigated on the swarm manager export device- sdb if a separate data disk was
+  given to the swarm manager, else sda.
+
+Example of host dashboard:
+![host-dashboard-1](assets/host-1.png)
+![host-dashboard-2](assets/host-2.png)
+![host-dashboard-3](assets/host-3.png)
+![host-dashboard-4](assets/host-4.png)
+![host-dashboard-5](assets/host-5.png)
+![host-dashboard-6](assets/host-6.png)
+![host-dashboard-7](assets/host-7.png)
+![host-dashboard-8](assets/host-8.png)
+
+4. Jobs Dashboard
+  This dashboard provides metrics on the jobs that have been run in the cluster. It is similar to the broker dashboard
+  but insead of the metrics coming from the broker it comes from the scheduler service. It provides data on the number of
+  jobs scheduled, completed, failed, and pending.
+
+Example of jobs dashboard:
+![job-dashboard-1](assets/job-1.png)
+![job-dashboard-2](assets/job-2.png)
+
+5. Proxy Dashboard
+  This dashboard provides metrics on the proxy service. It provides data on the requests, and connection states
+  broken down into active, reading, writing, and waiting.
+
+Example of proxy dashboard:
+![proxy-dashboard-1](assets/proxy-1.png)
+
+6. Swarm Dashboard
+  This dashboard provides metrics on the swarm cluster. It is similar to the hosts dashboard but combines the data from
+  all hosts in the cluster to provide you with a single view of the cluster performance and utilization. It gives you
+  a clickable node link to pull-up node specific data (routes you to hosts dashboard for a particular node on a separate
+  browser tab).
+
+Example of swarm dashboard:
+![swarm-dashboard-1](assets/swarm-1.png)
+![swarm-dashboard-2](assets/swarm-2.png)
+![swarm-dashboard-3](assets/swarm-3.png)
+![swarm-dashboard-4](assets/swarm-4.png)
+![swarm-dashboard-5](assets/swarm-5.png)
+![swarm-dashboard-6](assets/swarm-6.png)
+![swarm-dashboard-7](assets/swarm-7.png)
+![swarm-dashboard-8](assets/swarm-8.png)

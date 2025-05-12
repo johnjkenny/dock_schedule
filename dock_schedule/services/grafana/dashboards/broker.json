@@ -5,7 +5,6 @@
     "graphTooltip": 1,
     "liveNow": false,
     "panels": [
-
       {
         "title": "Overview",
         "type": "row",
@@ -17,8 +16,6 @@
           "y": 0
         }
       },
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -89,11 +86,6 @@
         "title": "Pending Jobs",
         "type": "stat"
       },
-
-
-
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -163,8 +155,6 @@
         "title": "Worker Queue",
         "type": "stat"
       },
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -234,8 +224,6 @@
         "title": "Jobs Scheduled",
         "type": "stat"
       },
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -305,9 +293,6 @@
         "title": "Jobs Delivered",
         "type": "stat"
       },
-
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -377,9 +362,6 @@
         "title": "Completed Jobs",
         "type": "stat"
       },
-
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -448,8 +430,6 @@
         "title": "Scheduler Connections",
         "type": "stat"
       },
-
-
       {
         "datasource": {
           "type": "prometheus",
@@ -518,15 +498,6 @@
         "title": "Worker Connections",
         "type": "stat"
       },
-
-
-
-
-
-
-
-
-
       {
         "title": "Scheduler",
         "type": "row",
@@ -981,13 +952,6 @@
           }
         ]
       },
-
-
-
-      
-
-
-
       {
         "title": "Workers",
         "type": "row",
