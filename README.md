@@ -20,7 +20,7 @@ The proxy service exposes ports `80`, `443`, and `8080`. `80` reroutes to `443` 
 Port `8080` routes to prometheus service UI where you can see the state of the swarm metric scrape jobs as well as run
 queries against the data. You can also use `/api/v1/query` URI to query the prometheus API for metrics.
 
-The worker can handle python, bash, php, javascript (npm/node), and ansible jobs. By default there are three worker replicas
+The worker can handle python, bash, php, javascript (node), and ansible jobs. By default there are three worker replicas
 within the swarm cluster. Each worker can queue a total of 3 jobs at a time which means a total of 9 jobs can be
 delivered to the swarm workers at a time by default. The message broker service will hold onto the remaining queued jobs
 until a worker completes and acknowledges a job. You can view the broker queue in the grafana dashboard which will show you
@@ -28,6 +28,8 @@ how many messages (jobs) are waiting to be delivered to the workers. You can inc
 replicas based on the backlog of jobs in the queue. Depending on the resources you have available on your swarm manager
 node you may also have to increase/decrease the number of swarm nodes within the cluster to handle the load of the
 worker demand.
+
+![swarm-stack](assets/swarm-stack.png)
 
 
 # Prerequisites
