@@ -66,28 +66,30 @@ options:
 
 # Initialization
 The idea is to have a VM or physical server as the initial swarm manager node. Clone the repository to the server you
-wish to use as the primary swam cluster node. A 2 CPU, 2GB RAM server with 20GB storage is sufficient for the initial
-deployment with low work load. Scale up the cluster as needed.
+wish to use as the primary swam cluster node. A 2 CPU, 2GB RAM server with 10GB boot disk and 5 GB data disk is
+sufficient for the initial deployment with low work load. Scale up the cluster as needed.
 
-The initialization process creates the directory `/opt/dock-schedule` on the swarm manager node. The service, job, and
-configuration files are copied from the git repository clone to this directory tree. The init process creates the
-service users, the directory tree, a certificate store to generate the TLS host and service certificates, generates
-ansible ssh keys, installs NFS, exports `/opt/dock-schedule` directory as a NFS share using the swarm manager subnet,
-installs docker, creates a docker swarm, creates the docker swarm networks and secrets for the services, installs
-firewalld and opens up the required NFS and Docker ports, builds the docker images, pushes the images to the swarm
-registry and then starts the swarm stack services.
+The initialization process does the following:
+
+- populates `/opt/dock-schedule` directory on the swarm manager node by copying the required data from the git repository to this export directory
+- creates service users
+- creates certificate store to generate the TLS host and service certificates
+- generates ansible private/public ssh key
+- installs NFS and exports `/opt/dock-schedule` directory as an NFS share using the swarm manager subnet
+- installs docker and creates a swarm cluster, networks, and secrets for the services
+- installs firewalld and opens up the required NFS and Docker ports
+- builds the service images, pushes the images to the swarm registry and then starts the swarm services.
 
 The generated ansible private ssh key is `/opt/dock-schedule/ansible/.env/.ansible_rsa`. Ansible is used to configure
-new nodes added to the swarm cluster. You will need the ansible public key
-`/opt/dock-schedule/ansible/.env/.ansible_rsa.pub` to be added to the `~/.ssh/authorized_keys` on the ansible user of
-the new swam nodes you add to the cluster. You can either keep the generated ansible ssh keys and deploy the public key
-to new nodes or you can replace the ansible ssh keys with your own. The private and public keys are also used to run
-ansible worker jobs so any remote ansible jobs will also require to have the same ansible public key added to the
-ansible user's `~/.ssh/authorized_keys` file.
+new nodes added to the swarm cluster. You will need the ansible public key to be added to the
+`/home/ansible/.ssh/authorized_keys` file on new swam nodes you add to the cluster. You can either keep the generated
+ansible ssh keys and deploy the public key to new nodes or you can replace the ansible ssh keys with your own. The
+private and public keys are also used to run ansible worker jobs so any remote ansible jobs will also require to have
+the same ansible public key added to the authorized_keys file.
 
 Since we are using NFS to share the `/opt/dock-schedule` directory tree across the swarm cluster you do not have to
 install the git repository on each node. When adding new nodes to the swarm cluster the export will be mounted on each
-swarm node. Several services have persistent storage volumes assigned to then which are also shared via NFS in the
+swarm node. Several services have persistent storage volumes assigned to them which are also shared via NFS in the
 swarm. The host and services need to have the same user ID and group ID for the permissions and ownership to work
 correctly. Each user is given the following UID/GID on the swarm hosts and within the container services:
 
@@ -97,8 +99,9 @@ correctly. Each user is given the following UID/GID on the swarm hosts and withi
 
 
 1. Install the required dependencies:
+
 It is recommended to create a python virtual environment on the export directory so it can be used on all swarm nodes
-in the cluster without the need to install the dependencies on each node. As part of the init process, if
+in the cluster without the need to install the dependencies on each node. As part of the init process if
 `/opt/dock-schedule/venv` directory exists then an entry will be added to `/root/.bashrc` to activate the virtual
 environment on every new shell session. This will give you access to the `dschedule` command regardless of the current
 directory you are in or swarm node type, but keep in mind that not all commands will work on all nodes at this time.
@@ -108,7 +111,7 @@ Some commands will only work on the swarm manager node.
 # Create the directory:
 mkdir -p /opt/dock-schedule
 
-# create a virtual environment:
+# create a virtual environment (might have to specify the python version- python3.12):
 python3 -m venv /opt/dock-schedule/venv
 
 # activate the virtual environment:
@@ -313,10 +316,13 @@ options:
 You must specify the node name `--name, -n` and the IP address `--ip, -i` of the node you want to add to the swarm.
 The process will use ansible to configure the node join and service deployment. The ansible public key must be in
 `/home/ansible/.ssh/authorized_keys` on the node to be added (this has to be done manually or part of your node
-deployment process). The ansible playbook will create the service users, install NFS, mount the NFS share,
-install docker, install firewalld and open the required ports, create the service hosts file entries, joins the swarm,
-pulls the docker images from the swarm registry, then rebalance the swarm services making the newly added node a host
-to several swarm services.
+deployment process). The ansible playbook will do the following:
+
+- create the service users
+- install NFS and mounts the NFS export share from the swarm manager node
+- install firewalld and open the required ports
+- create the service hosts file entries
+- installs docker and joins the swarm, pulls the docker images from the swarm registry then rebalance the swarm services
 
 ```bash
 dschedule -S -a -n dock-schedule-2 -i 192.168.122.52
@@ -447,11 +453,18 @@ dock-schedule-2            : ok=37   changed=27   unreachable=0    failed=0    s
 ```
 
 2. Remove a node from the swarm cluster:
+
 You must specify the node name `--name, -n` and the IP address `--ip, -i` of the node you want to remove from the swarm.
 The ansible public key should already be in `/home/ansible/.ssh/authorized_keys` from the add node process. The remove
-process will set the availability of the node to drain, wait for all services to relocate, leaves the swarm, removes
-the service host entries, unmounts the NFS share, closes the swarm firewalld ports, stops the NFS client service, then
-removes the node on the swarm manager node.
+process does the following:
+
+- sets the availability of the node to drain and wait for all services to relocate
+- the node leaves the swarm
+- removes the service host entries
+- unmounts the NFS share
+- closes the swarm firewalld ports
+- stops the NFS client service
+- removes the node from the swarm cluster on the swarm manager node.
 
 ```bash
 dschedule -S -R -n dock-schedule-2 -i 192.168.122.52
@@ -836,8 +849,9 @@ dschedule -s -l -v
 ```
 
 2. Reload swarm service:
-You can reload a service using the `--reload` option. This will force the service to redeploy and remove the
-currently running container once the new container is in a healthy state. You can use `all` to reload all
+
+You can reload a service using the `--reload` option. This will force the service to redeploy which entails starting a
+new service replica and once the new replica is healthy, the old replica will be stopped. You can use `all` to reload all
 services which is similar to running `--balance` option, but it will also reload the services that are pinned to the
 manager node as well as the global services which do not have an impact on the rebalancing efforts. You can use this
 method to basically clear the entire swarm state, but note, it takes quite awhile to reload all of the services.
@@ -875,6 +889,7 @@ dschedule -s -R registry
 ```
 
 3. Stopping swarm service:
+
 You can use the service `--stop` option to stop a swarm service. You can omit a service name to stop all services, but
 the registry service. The registry service cannot be started or stopped via the `dschedule` command; it can only be
 reloaded. You can also specify `all` which does the same or you can specify one or multiple services to stop. Use the
@@ -973,6 +988,7 @@ dschedule -s -S registry
 ```
 
 4. Start swarm services:
+
 You can use the service `--start` option to start a swarm service. You can omit a service name to start all services, but
 the registry service. The registry service cannot be started or stopped via the `dschedule` command; it can only be
 reloaded. You can also specify `all` which does the same or you can specify one or multiple services to start.
@@ -1045,6 +1061,7 @@ You can use the `dschedule --container` command to view information about the co
 swarm node. You can list, prune, get the logs and stats for containers.
 
 1. List containers:
+
 List the local swarm node containers. This is similar to running `docker ps --all` and the list will include containers
 that have been stopped or exited which will include containers that were redeployed using the `--reload` option. This is
 expected and you can use the `--prune` option to remove exited containers from the list.
@@ -1214,6 +1231,7 @@ dschedule -c -l -v
 ```
 
 2. Prune containers:
+
 You can use `--prune` to delete exited containers from the local swarm node.
 
 ```bash
@@ -1249,6 +1267,7 @@ dschedule -c -l
 ```
 
 3. Get Container stats:
+
 You can use the `--stats` option to get the container stats for a specific container or you can use `all` to get stats
 for all containers on the local swarm node. The verbose option has no effect at this time.
 
@@ -1338,6 +1357,7 @@ dschedule -c -s all
 ```
 
 4. Get container logs:
+
 You can use either `--logs` or `--watch` to get the logs for a specific container. The `--logs` option will get the
 current log and output to console. The `--watch` option will do the same, but stream any new entries to the console
 until interrupted via ctrl+c.
@@ -1407,7 +1427,7 @@ under either jobs/<type> or ansible/playbooks. The `--type` is the interpreter t
 of the script or playbook. The `--args` options is used to pass arguments to the job script (not ansible playbook).
 Use `extraVars` to pass key-value pairs to the ansible playbook if `--type` is ansible. Use `--hostInventory` to run
 the ansible playbook on remote hosts or omit to run the job on the worker locally. The remote hosts must have the
-ansible public ssh key assigned to user ansible authorized keys as mentioned earlier. You can create a job that is
+ansible public ssh key assigned to the ansible user's authorized keys as mentioned earlier. You can create a job that is
 disabled by using the `--disabled` option. Then you can enable it later by using the `--update` option.
 
 Every job type (python3, ansible, bash, php, node) has a test job created for you to test job successes and failures.
@@ -1471,7 +1491,7 @@ options:
 ```
 
 ```bash
-# Create python test job that run every hour with arg '0' (success):
+# Create python test job that runs every hour with arg '0' (success):
 dschedule -j -c -n Python-Test01 -t python3 -r test.py -a 0 -f hour -i 1
 [2025-04-26 16:06:17,987][INFO][utils,343]: Job Python-Test01 created successfully
 
@@ -1490,7 +1510,6 @@ dschedule -j -c -n JS-Test01 -t node -r test.js -a 1 -f day -A 06:15 -T EST
 # Create ansible job that runs every minute with exit_code=0 (success):
 dschedule -j -c -n Ansible-Test01 -t ansible -r test.yml -f minute -i 5 -e exit_code=0
 [2025-04-29 14:58:58,791][INFO][schedule,104]: Job Ansible-Test01 created successfully
-
 ```
 
 2. List job scheduls/crons:
@@ -1933,7 +1952,7 @@ You can manually run jobs using the `--run` option. This will create a new job a
 be a delay in the job execution especially if the job queue is already backlogged. You can wait for the job to complete
 using the `--wait` option if desired. You can select to run a predefined cron job using the `--id` option and providing
 the job ID to run. You can also specify the job parameters for the manual run similar to creating a cron job using
-the `--create` minus the frequency the job should run.
+the `--create` option except the need for the frequency the job should run.
 
 Command Options:
 ```bash
@@ -1978,6 +1997,7 @@ options:
 ```
 
 1. Run Local Jobs (on worker containers in the swarm):
+
 ```bash
 # Drop --wait, -w to run job in background
 dschedule -j -r -i adf98018-5e91-4040-8b89-4e118eb8f2e5 -w
@@ -2045,7 +2065,7 @@ dschedule -j -r -t ansible -r test.yml -e exit_code=1 -w
 2. Run Remote Jobs (on remote ansible hosts):
 
 There is an ansible playbook called `remote_cmd.yml` that allows you to run remote commands on the ansible hosts. You
-must provide the `--extraVars` `command` key with the command you want to run as the value. This playbook is simply to
+must provide the `--extraVars` `command` key with the command you want to run as the value. This playbook was createrd to
 test the remote functionality, but you could also use it for a make-shift infrastructure system checker with a handful
 of commands you want to run on remote hosts at certain intervals via the scheduler. Create your own playbooks for
 a higher level of infrastructure command and control.
@@ -2087,11 +2107,11 @@ all jobs that have run with the given name. Use `all` with `--name` to get all j
 limit the returned result quantity. You can also use `--filter` to filter job results by job status. Success will give
 you all jobs that have exited with a 0 exit code. Failed will give you all jobs that have exited with a non-zero exit
 code. Scheduled will give you all jobs sitting in the queue waiting for a worker to acknowledge the job. Use `--verbose`
-to get more detailed output of the job results. The job results are stored in the database and will be autodeleted after
+to get detailed output of the job results. The job results are stored in the database and will be autodeleted after
 7 days.
 
 Each ansible task will be logged in the database with its stdin/stdout/stderr output. You can use the `--verbose` option
-to get more details on the ansible tasks in your playbooks.
+to get details on the ansible tasks from your playbooks.
 
 
 ```bash
@@ -2388,7 +2408,7 @@ ID: 580b3aba-b799-439a-9ab8-fcacc56f6e48, Name: Python-Test01, State: completed,
   Task: Run Job, Host: localhost, Error: non-zero return code
 
 
-# get details results a specific job:
+# get detailed result for a specific job:
 dschedule -j -R -i 6b3e77c2-99a0-401e-b090-a83e1ae82035 -v
 Job Results:
 [
@@ -2494,7 +2514,7 @@ Timezone Options:
 
 # Workers
 
-The worker service should be the only one in the stack that would require to scale. You can use the `--worker` option
+The worker service would be the only service in the stack that would require to scale. You can use the `--worker` option
 to specifiy the number of workers that should be deployed in the cluster. This will not scale up the cluster to the
 quantity provided, but will ensure that number of workers are deployed in the cluster. Meaning, it will also remove
 workers if the number is lower than what is currently running.
@@ -2644,16 +2664,19 @@ dock-schedule-3 (192.168.122.195)
 Grafana is deployed in the stack so you can view the metrics of the cluster and services. The default username and
 password is `admin` and `admin`. You will be prompted to change the password on first login. You can access Grafana
 portal at `https://<swarm-host-ip>`. The stack uses a self-signed certificate so you will need to accept the
-certificate. There are 6 dashboards provided to help track performance, usage, and errors in the cluster.
+certificate. There are 6 dashboards provided to help track performance, usage, and errors in the cluster. You can also
+configure alerts in Grafana to notify you when certain thresholds are met, but that is outside the scope of this
+documentation.
 
 1. Broker Dashboard
+
   This dashboard provides metrics on the job broker (rabbitmq). It provides data on pending jobs (backlog) where jobs
   are waiting for a worker to become available to process the job. A backlog indicates there is not enough workers in
   the cluster as each worker can run three jobs in parrellel and queue another 6 jobs. The dashboard also provides
   metrics on the worker queue which should be 9x the number of workers in the cluster if fully utilized. It shows
   metrics on the number of jobs scheduled, delivered, as well as the number of connections to the broker. Each
   worker will have three connections to the broker and the scheduler will connect when a job is ready to be scheduled
-  and then stays connected. The scheduler can schedule three jobs in parrell and will establish the connections as the
+  and then stays connected. The scheduler can schedule three jobs in parrellel and will establish the connections as the
   load requires it.
 
 Example of broker dashboard:
@@ -2662,10 +2685,10 @@ Example of broker dashboard:
 ![broker-dashboard-3](assets/broker-3.png)
 
 2. Database Dashboard
+
   This dashboard provides metrics on the MongoDB database. It provides data on the number of connections to the
   database, operations per second broken down into inserts, updates, deletes, and reads (queries). It also provides
-  data on the latency for write, read, and command operations and tracks the job database growth and displays the
-  collection and index sizes.
+  data on the latency for read, write, and command operations and tracks the job database growth.
 
 Example of database dashboard:
 ![database-dashboard-1](assets/database-1.png)
@@ -2673,11 +2696,12 @@ Example of database dashboard:
 ![database-dashboard-3](assets/database-3.png)
 
 3. Hosts Dashboard
+
   This dashboard provides metrics on the host systems within the cluster. It provides data on CPU, memory, disk, and 
   network usage. It also provides data on the number of containers running on the host and the resources they are
   consuming. Keep in mind that the NFS swarm share comes from the swarm manager device mounted on `/opt/dock-schedule`.
   Any IO performance issues should be investigated on the swarm manager export device- sdb if a separate data disk was
-  given to the swarm manager, else sda.
+  given to the swarm manager, else sda (swarm manager boot device and not recommended).
 
 Example of host dashboard:
 ![host-dashboard-1](assets/host-1.png)
@@ -2690,7 +2714,8 @@ Example of host dashboard:
 ![host-dashboard-8](assets/host-8.png)
 
 4. Jobs Dashboard
-  This dashboard provides metrics on the jobs that have been run in the cluster. It is similar to the broker dashboard
+
+  This dashboard provides metrics on the jobs that have run in the cluster. It is similar to the broker dashboard
   but insead of the metrics coming from the broker it comes from the scheduler service. It provides data on the number of
   jobs scheduled, completed, failed, and pending.
 
@@ -2699,13 +2724,15 @@ Example of jobs dashboard:
 ![job-dashboard-2](assets/job-2.png)
 
 5. Proxy Dashboard
-  This dashboard provides metrics on the proxy service. It provides data on the requests, and connection states
-  broken down into active, reading, writing, and waiting.
+
+  This dashboard provides metrics on the proxy service. It provides data on the requests and connection states
+  that are broken down into active, reading, writing, and waiting states.
 
 Example of proxy dashboard:
 ![proxy-dashboard-1](assets/proxy-1.png)
 
 6. Swarm Dashboard
+
   This dashboard provides metrics on the swarm cluster. It is similar to the hosts dashboard but combines the data from
   all hosts in the cluster to provide you with a single view of the cluster performance and utilization. It gives you
   a clickable node link to pull-up node specific data (routes you to hosts dashboard for a particular node on a separate
